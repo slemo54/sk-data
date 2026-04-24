@@ -93,6 +93,8 @@ for each row execute function public.set_updated_at();
 create or replace function public.log_contact_changes()
 returns trigger
 language plpgsql
+security definer
+set search_path = public
 as $$
 declare
   actor text;
