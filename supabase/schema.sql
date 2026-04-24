@@ -3,6 +3,7 @@
 
 create extension if not exists pgcrypto;
 
+-- Base tables (safe to re-run; ALTER TABLE handles migrations)
 create table if not exists public.contacts (
   id uuid primary key default gen_random_uuid(),
   full_name text not null,
@@ -16,22 +17,22 @@ create table if not exists public.contacts (
   title text,
   occupation text,
   cms_cert text,
-  review_status text default 'unseen' check (review_status in ('seen', 'unseen')),
-  next_action text,
-  approval boolean default false,
-  contacted boolean default false,
-  notes text,
   status text not null default 'todo' check (status in ('todo', 'in_progress', 'reviewed')),
   assigned_to text,
   claimed_at timestamptz,
   reviewed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique(normalized_name, country, city),
-  approval boolean default false,
-  contacted boolean default false,
-  notes text
+  unique(normalized_name, country, city)
 );
+
+-- Migrate: add outreach columns if missing
+alter table public.contacts
+  add column if not exists review_status text default 'unseen' check (review_status in ('seen', 'unseen')),
+  add column if not exists next_action text,
+  add column if not exists approval boolean default false,
+  add column if not exists contacted boolean default false,
+  add column if not exists notes text;
 
 create table if not exists public.contact_sources (
   id uuid primary key default gen_random_uuid(),
@@ -59,6 +60,11 @@ create table if not exists public.profiles_review_log (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.admin_whitelist (
+  email text primary key
+);
+
+-- Indexes
 create index if not exists idx_contacts_normalized_name on public.contacts(normalized_name);
 create index if not exists idx_contacts_status on public.contacts(status);
 create index if not exists idx_contacts_assigned_to on public.contacts(assigned_to);
@@ -67,10 +73,7 @@ create index if not exists idx_contacts_review_status on public.contacts(review_
 create index if not exists idx_contacts_next_action on public.contacts(next_action);
 create index if not exists idx_contact_sources_contact_id on public.contact_sources(contact_id);
 
-create table if not exists public.admin_whitelist (
-  email text primary key
-);
-
+-- Updated at trigger
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -86,6 +89,7 @@ create trigger trg_contacts_updated_at
 before update on public.contacts
 for each row execute function public.set_updated_at();
 
+-- Audit trigger
 create or replace function public.log_contact_changes()
 returns trigger
 language plpgsql
@@ -141,6 +145,7 @@ create trigger trg_contacts_audit
 after update on public.contacts
 for each row execute function public.log_contact_changes();
 
+-- Claim RPC
 create or replace function public.claim_contacts(claim_count integer, claim_user text)
 returns setof public.contacts
 language plpgsql
@@ -168,10 +173,12 @@ begin
 end;
 $$;
 
+-- RLS
 alter table public.contacts enable row level security;
 alter table public.contact_sources enable row level security;
 alter table public.profiles_review_log enable row level security;
 
+-- Role helper
 create or replace function public.get_my_role()
 returns text
 language sql
@@ -190,7 +197,7 @@ as $$
   end;
 $$;
 
--- Viewer / capo: read access.
+-- Policies
 drop policy if exists contacts_select on public.contacts;
 create policy contacts_select on public.contacts
 for select
@@ -206,7 +213,6 @@ create policy logs_select on public.profiles_review_log
 for select
 using (true);
 
--- Admin can update everything; operators only their assigned or claimable rows.
 drop policy if exists contacts_update on public.contacts;
 create policy contacts_update on public.contacts
 for update
@@ -221,7 +227,6 @@ with check (
   or assigned_to = coalesce(current_setting('request.jwt.claims', true)::json->>'email', '')
 );
 
--- Only admins or ingestion scripts can insert.
 drop policy if exists contacts_insert on public.contacts;
 create policy contacts_insert on public.contacts
 for insert
@@ -232,5 +237,6 @@ create policy sources_insert on public.contact_sources
 for insert
 with check (true);
 
+-- Grants
 grant execute on function public.claim_contacts(integer, text) to anon, authenticated;
 grant execute on function public.get_my_role() to anon, authenticated;
