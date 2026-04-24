@@ -1,5 +1,15 @@
 export type ReviewStatus = 'todo' | 'in_progress' | 'reviewed';
 
+export type ReviewVisibility = 'seen' | 'unseen';
+
+export type NextAction =
+  | 'pronto_da_contattare'
+  | 'da_approvare'
+  | 'follow_up'
+  | 'contattato'
+  | 'da_verificare'
+  | 'chiuso';
+
 export type ContactSourceName = 'wine_awards' | 'guildsomm';
 
 export interface Contact {
@@ -15,6 +25,11 @@ export interface Contact {
   title: string | null;
   occupation: string | null;
   cms_cert: string | null;
+  review_status: ReviewVisibility;
+  next_action: NextAction | null;
+  approval: boolean;
+  contacted: boolean;
+  notes: string | null;
   status: ReviewStatus;
   assigned_to: string | null;
   claimed_at: string | null;
@@ -44,6 +59,10 @@ export interface ContactsFilters {
   hasLinkedin?: boolean;
   hasEmail?: boolean;
   status?: ReviewStatus | 'all';
+  reviewStatus?: ReviewVisibility | 'all';
+  nextAction?: NextAction | 'all';
+  approved?: boolean;
+  contacted?: boolean;
   assignedToMe?: boolean;
   unassigned?: boolean;
   userId?: string;
@@ -80,13 +99,16 @@ export interface ContactPatch {
   employer?: string | null;
   title?: string | null;
   occupation?: string | null;
+  review_status?: ReviewVisibility;
+  next_action?: NextAction | null;
+  approval?: boolean;
+  contacted?: boolean;
+  notes?: string | null;
 }
 
 export interface DashboardKpi {
   total: number;
-  withSocial: number;
-  withEmail: number;
-  inReview: number;
-  reviewed: number;
-  unassigned: number;
+  pendingReview: number;
+  readyToContact: number;
+  contacted: number;
 }

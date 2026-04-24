@@ -16,6 +16,11 @@ create table if not exists public.contacts (
   title text,
   occupation text,
   cms_cert text,
+  review_status text default 'unseen' check (review_status in ('seen', 'unseen')),
+  next_action text,
+  approval boolean default false,
+  contacted boolean default false,
+  notes text,
   status text not null default 'todo' check (status in ('todo', 'in_progress', 'reviewed')),
   assigned_to text,
   claimed_at timestamptz,
@@ -55,6 +60,8 @@ create index if not exists idx_contacts_normalized_name on public.contacts(norma
 create index if not exists idx_contacts_status on public.contacts(status);
 create index if not exists idx_contacts_assigned_to on public.contacts(assigned_to);
 create index if not exists idx_contacts_country on public.contacts(country);
+create index if not exists idx_contacts_review_status on public.contacts(review_status);
+create index if not exists idx_contacts_next_action on public.contacts(next_action);
 create index if not exists idx_contact_sources_contact_id on public.contact_sources(contact_id);
 
 create or replace function public.set_updated_at()
@@ -84,6 +91,10 @@ begin
   if tg_op = 'UPDATE' and (
     old.status is distinct from new.status
     or old.assigned_to is distinct from new.assigned_to
+    or old.approval is distinct from new.approval
+    or old.contacted is distinct from new.contacted
+    or old.next_action is distinct from new.next_action
+    or old.review_status is distinct from new.review_status
   ) then
     insert into public.profiles_review_log (
       contact_id,
@@ -91,7 +102,8 @@ begin
       old_status,
       new_status,
       old_assigned_to,
-      new_assigned_to
+      new_assigned_to,
+      note
     )
     values (
       new.id,
@@ -99,7 +111,17 @@ begin
       old.status,
       new.status,
       old.assigned_to,
-      new.assigned_to
+      new.assigned_to,
+      jsonb_build_object(
+        'old_approval', old.approval,
+        'new_approval', new.approval,
+        'old_contacted', old.contacted,
+        'new_contacted', new.contacted,
+        'old_next_action', old.next_action,
+        'new_next_action', new.next_action,
+        'old_review_status', old.review_status,
+        'new_review_status', new.review_status
+      )::text
     );
   end if;
 

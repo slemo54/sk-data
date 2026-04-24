@@ -29,6 +29,7 @@ function applyFilters(contacts: Contact[], filters: ContactsFilters): Contact[] 
         contact.occupation,
         contact.city,
         contact.country,
+        contact.notes,
       ]
         .filter(Boolean)
         .join(' ')
@@ -44,6 +45,30 @@ function applyFilters(contacts: Contact[], filters: ContactsFilters): Contact[] 
     }
 
     if (filters.status && filters.status !== 'all' && contact.status !== filters.status) {
+      return false;
+    }
+
+    if (filters.reviewStatus && filters.reviewStatus !== 'all' && contact.review_status !== filters.reviewStatus) {
+      return false;
+    }
+
+    if (filters.nextAction && filters.nextAction !== 'all' && contact.next_action !== filters.nextAction) {
+      return false;
+    }
+
+    if (filters.approved === true && !contact.approval) {
+      return false;
+    }
+
+    if (filters.approved === false && contact.approval) {
+      return false;
+    }
+
+    if (filters.contacted === true && !contact.contacted) {
+      return false;
+    }
+
+    if (filters.contacted === false && contact.contacted) {
       return false;
     }
 
@@ -184,6 +209,18 @@ export async function setContactStatus(contactId: string, status: ReviewStatus):
   return rows[0];
 }
 
+export async function toggleApproval(contactId: string, value: boolean): Promise<Contact> {
+  return updateContact(contactId, { approval: value });
+}
+
+export async function toggleContacted(contactId: string, value: boolean): Promise<Contact> {
+  return updateContact(contactId, { contacted: value });
+}
+
+export async function addNote(contactId: string, note: string): Promise<Contact> {
+  return updateContact(contactId, { notes: note.trim() || null });
+}
+
 export async function fetchContactSources(contactId: string): Promise<ContactSource[]> {
   return sbFetch<ContactSource[]>(
     `/rest/v1/contact_sources?select=*&contact_id=eq.${contactId}&order=created_at.asc`,
@@ -191,25 +228,21 @@ export async function fetchContactSources(contactId: string): Promise<ContactSou
 }
 
 export function computeDashboardKpi(contacts: Contact[]): DashboardKpi {
-  const withSocial = contacts.filter((c) => c.instagram_url || c.linkedin_url).length;
-  const withEmail = contacts.filter((c) => c.email).length;
-  const inReview = contacts.filter((c) => c.status === 'in_progress').length;
-  const reviewed = contacts.filter((c) => c.status === 'reviewed').length;
-  const unassigned = contacts.filter((c) => !c.assigned_to).length;
+  const pendingReview = contacts.filter((c) => c.review_status === 'unseen').length;
+  const readyToContact = contacts.filter((c) => c.next_action === 'pronto_da_contattare').length;
+  const contactedCount = contacts.filter((c) => c.contacted).length;
 
   return {
     total: contacts.length,
-    withSocial,
-    withEmail,
-    inReview,
-    reviewed,
-    unassigned,
+    pendingReview,
+    readyToContact,
+    contacted: contactedCount,
   };
 }
 
 export async function fetchDashboardKpi(): Promise<DashboardKpi> {
   const rows = await sbFetch<
-    Array<Pick<Contact, 'email' | 'instagram_url' | 'linkedin_url' | 'status' | 'assigned_to'>>
-  >('/rest/v1/contacts?select=email,instagram_url,linkedin_url,status,assigned_to');
+    Array<Pick<Contact, 'review_status' | 'next_action' | 'contacted'>>
+  >('/rest/v1/contacts?select=review_status,next_action,contacted');
   return computeDashboardKpi(rows as Contact[]);
 }
