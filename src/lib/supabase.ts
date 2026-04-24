@@ -1,3 +1,5 @@
+import { getAccessToken } from '@/lib/auth';
+
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
@@ -6,9 +8,10 @@ if (!url || !anonKey) {
 }
 
 function buildHeaders(extra?: Record<string, string>): HeadersInit {
+  const token = getAccessToken();
   return {
     apikey: anonKey ?? '',
-    Authorization: `Bearer ${anonKey ?? ''}`,
+    Authorization: token ? `Bearer ${token}` : `Bearer ${anonKey ?? ''}`,
     'Content-Type': 'application/json',
     ...extra,
   };

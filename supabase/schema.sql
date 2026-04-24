@@ -27,7 +27,10 @@ create table if not exists public.contacts (
   reviewed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique(normalized_name, country, city)
+  unique(normalized_name, country, city),
+  approval boolean default false,
+  contacted boolean default false,
+  notes text
 );
 
 create table if not exists public.contact_sources (
@@ -63,6 +66,10 @@ create index if not exists idx_contacts_country on public.contacts(country);
 create index if not exists idx_contacts_review_status on public.contacts(review_status);
 create index if not exists idx_contacts_next_action on public.contacts(next_action);
 create index if not exists idx_contact_sources_contact_id on public.contact_sources(contact_id);
+
+create table if not exists public.admin_whitelist (
+  email text primary key
+);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -165,6 +172,24 @@ alter table public.contacts enable row level security;
 alter table public.contact_sources enable row level security;
 alter table public.profiles_review_log enable row level security;
 
+create or replace function public.get_my_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case
+    when exists (
+      select 1 from public.admin_whitelist
+      where email = coalesce(current_setting('request.jwt.claims', true)::json->>'email', '')
+    ) then 'admin'
+    when coalesce(current_setting('request.jwt.claims', true)::json->>'user_metadata', '{}')::json->>'role' = 'admin'
+      then 'admin'
+    else 'operator'
+  end;
+$$;
+
 -- Viewer / capo: read access.
 drop policy if exists contacts_select on public.contacts;
 create policy contacts_select on public.contacts
@@ -181,20 +206,22 @@ create policy logs_select on public.profiles_review_log
 for select
 using (true);
 
--- Team updates are limited to claimable or assigned rows.
+-- Admin can update everything; operators only their assigned or claimable rows.
 drop policy if exists contacts_update on public.contacts;
 create policy contacts_update on public.contacts
 for update
 using (
-  assigned_to is null
+  public.get_my_role() = 'admin'
+  or assigned_to is null
   or assigned_to = coalesce(current_setting('request.jwt.claims', true)::json->>'email', '')
 )
 with check (
-  assigned_to is null
+  public.get_my_role() = 'admin'
+  or assigned_to is null
   or assigned_to = coalesce(current_setting('request.jwt.claims', true)::json->>'email', '')
 );
 
--- Service role or SQL editor can insert/update through ingestion scripts.
+-- Only admins or ingestion scripts can insert.
 drop policy if exists contacts_insert on public.contacts;
 create policy contacts_insert on public.contacts
 for insert
@@ -206,3 +233,4 @@ for insert
 with check (true);
 
 grant execute on function public.claim_contacts(integer, text) to anon, authenticated;
+grant execute on function public.get_my_role() to anon, authenticated;
