@@ -44,19 +44,24 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { toast } from 'sonner';
 import {
   Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  EyeOff,
   Instagram,
   Linkedin,
   LogOut,
+  MailOpen,
   MessageSquare,
   NotebookPen,
   RefreshCw,
   Search,
+  Users,
   X,
 } from 'lucide-react';
 
@@ -261,15 +266,21 @@ export default function OperatorePage() {
 
   const handleClaim = async () => {
     if (!userEmail) {
-      setError('Devi essere autenticato per fare claim.');
+      toast.error('Devi essere autenticato per fare claim.');
       return;
     }
     try {
-      await claimContacts(claimCount, userEmail);
+      const claimed = await claimContacts(claimCount, userEmail);
+      if (claimed.length === 0) {
+        toast.info('Nessun contatto disponibile per il claim.');
+        return;
+      }
+      toast.success(`${claimed.length} contatti assegnati a te`);
+      handleFilterChange({ assignedToMe: true, userId: userEmail });
       await refreshContacts();
       await refreshKpi();
     } catch (err) {
-      setError((err as Error).message || 'Claim failed');
+      toast.error((err as Error).message || 'Claim fallito');
     }
   };
 
@@ -371,262 +382,325 @@ export default function OperatorePage() {
   };
 
   return (
-    <div className="app-shell min-h-screen bg-background">
-      <header className="app-header flex-col md:flex-row items-start md:items-center gap-3">
-        <div className="header-left">
-          <h1 className="text-2xl font-bold tracking-tight">
-            SK <span className="text-muted-foreground font-semibold">DATABASE</span>
-          </h1>
-          <p className="text-sm text-muted-foreground">Backend Operatori</p>
-        </div>
-        <div className="header-right flex-wrap">
-          <span className="text-sm text-muted-foreground">{userEmail}</span>
-          <Button variant="outline" size="sm" onClick={() => void refreshContacts()} className="gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
-          {lastRefreshed && (
-            <span className="text-xs text-muted-foreground hidden md:inline">{lastRefreshed}</span>
-          )}
-          <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2">
-            <LogOut className="h-4 w-4" />
-            Esci
-          </Button>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="border-b bg-card px-6 py-4">
+        <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              SK <span className="text-muted-foreground font-semibold">DATABASE</span>
+            </h1>
+            <p className="text-sm text-muted-foreground">Backend Operatori</p>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm text-muted-foreground">{userEmail}</span>
+            <Button variant="outline" size="sm" onClick={() => void refreshContacts()} className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+            {lastRefreshed && (
+              <span className="text-xs text-muted-foreground hidden md:inline">{lastRefreshed}</span>
+            )}
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2">
+              <LogOut className="h-4 w-4" />
+              Esci
+            </Button>
+          </div>
         </div>
       </header>
 
-      <main className="main-content">
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <div className="rounded-xl border bg-card p-4 shadow-sm flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total Profiles</span>
-            <span className="text-2xl font-bold">{kpi.total.toLocaleString()}</span>
-          </div>
-          <div className="rounded-xl border bg-card p-4 shadow-sm flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Pending Review</span>
-            <span className="text-2xl font-bold">{kpi.pendingReview.toLocaleString()}</span>
-          </div>
-          <div className="rounded-xl border bg-card p-4 shadow-sm flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Ready to Contact</span>
-            <span className="text-2xl font-bold">{kpi.readyToContact.toLocaleString()}</span>
-          </div>
-          <div className="rounded-xl border bg-card p-4 shadow-sm flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Contacted</span>
-            <span className="text-2xl font-bold">{kpi.contacted.toLocaleString()}</span>
-          </div>
-        </section>
-
-        <section className="flex flex-wrap items-center gap-2 bg-card border rounded-xl p-3">
-          <div className="flex items-center gap-2 flex-1 min-w-[240px]">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-            <Input
-              placeholder="Cerca nome, email, social, employer..."
-              value={filters.query ?? ''}
-              onChange={(e) => handleFilterChange({ query: e.target.value })}
-              className="h-9"
-            />
-          </div>
-          <Select
-            value={filters.nextAction ?? 'all'}
-            onValueChange={(v) => handleFilterChange({ nextAction: v === 'all' ? 'all' : (v as NextAction) })}
-          >
-            <SelectTrigger className="w-[160px] h-9 bg-background">
-              <SelectValue placeholder="Next Action" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutte le azioni</SelectItem>
-              {NEXT_ACTION_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={filters.reviewStatus ?? 'all'}
-            onValueChange={(v) => handleFilterChange({ reviewStatus: v as 'all' | 'seen' | 'unseen' })}
-          >
-            <SelectTrigger className="w-[150px] h-9 bg-background">
-              <SelectValue placeholder="Review Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti</SelectItem>
-              <SelectItem value="seen">Seen</SelectItem>
-              <SelectItem value="unseen">Unseen</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={filters.country ?? 'all'}
-            onValueChange={(v) => handleFilterChange({ country: v === 'all' ? undefined : v })}
-          >
-            <SelectTrigger className="w-[150px] h-9 bg-background">
-              <SelectValue placeholder="Paese" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti i paesi</SelectItem>
-              {countries.map((c) => (
-                <SelectItem key={c} value={c ?? ''}>{c}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </section>
-
-        <section className="flex flex-wrap items-center justify-between gap-3 bg-muted/40 border rounded-lg p-3">
-          <div className="flex flex-wrap gap-4 items-center">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <Checkbox checked={Boolean(filters.hasInstagram)} onCheckedChange={(v) => handleFilterChange({ hasInstagram: Boolean(v) })} />
-              IG
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <Checkbox checked={Boolean(filters.hasLinkedin)} onCheckedChange={(v) => handleFilterChange({ hasLinkedin: Boolean(v) })} />
-              LinkedIn
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <Checkbox checked={Boolean(filters.hasEmail)} onCheckedChange={(v) => handleFilterChange({ hasEmail: Boolean(v) })} />
-              Email
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <Checkbox checked={Boolean(filters.approved)} onCheckedChange={(v) => handleFilterChange({ approved: v ? true : undefined })} />
-              Approvati
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <Checkbox checked={Boolean(filters.contacted)} onCheckedChange={(v) => handleFilterChange({ contacted: v ? true : undefined })} />
-              Contattati
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <Checkbox checked={Boolean(filters.assignedToMe)} onCheckedChange={(v) => handleFilterChange({ assignedToMe: Boolean(v), userId: userEmail })} />
-              Assegnati a me
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <Checkbox checked={Boolean(filters.unassigned)} onCheckedChange={(v) => handleFilterChange({ unassigned: Boolean(v) })} />
-              Non assegnati
-            </label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              min={1}
-              max={250}
-              value={claimCount}
-              onChange={(e) => setClaimCount(Number(e.target.value || '1'))}
-              className="w-20 h-8"
-            />
-            <Button size="sm" onClick={handleClaim}>Claim</Button>
-          </div>
-        </section>
-
-        {error && <div className="panel error-box">{error}</div>}
-
-        <section className="table-panel">
-          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-            <div className="table-scroll">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead onClick={() => handleSort('full_name')} className="cursor-pointer whitespace-nowrap">Social Accounts</TableHead>
-                    <TableHead className="whitespace-nowrap">Restaurant / Location</TableHead>
-                    <TableHead className="whitespace-nowrap">Review Status</TableHead>
-                    <TableHead className="whitespace-nowrap">Approval</TableHead>
-                    <TableHead className="whitespace-nowrap">Contacted</TableHead>
-                    <TableHead className="whitespace-nowrap">Next Action</TableHead>
-                    <TableHead className="whitespace-nowrap">Inline Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
-                    </TableRow>
-                  )}
-                  {!loading && !contacts.length && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No contacts found.</TableCell>
-                    </TableRow>
-                  )}
-                  {!loading && contacts.map((contact) => (
-                    <TableRow
-                      key={contact.id}
-                      className={`cursor-pointer ${contact.id === selectedContactId ? 'bg-muted/50' : ''}`}
-                      onClick={() => { setSelectedContactId(contact.id); setSheetOpen(true); }}
-                    >
-                      <TableCell>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-semibold text-sm">{contact.full_name}</span>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {contact.instagram_url && (
-                              <span className="flex items-center gap-1"><Instagram className="h-3 w-3 text-pink-600" />@{getSocialHandle(contact.instagram_url)}</span>
-                            )}
-                            {contact.linkedin_url && (
-                              <span className="flex items-center gap-1"><Linkedin className="h-3 w-3 text-blue-700" />{getSocialHandle(contact.linkedin_url)}</span>
-                            )}
-                            {!contact.instagram_url && !contact.linkedin_url && <span className="text-muted-foreground/60">Nessun social</span>}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-sm">{contact.employer ?? '-'}</span>
-                          <span className="text-xs text-muted-foreground">{[contact.city, contact.country].filter(Boolean).join(', ') || '-'}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => {
-                          void updateContact(contact.id, { review_status: contact.review_status === 'seen' ? 'unseen' : 'seen' }).then(() => { void refreshContacts(); void refreshKpi(); });
-                        }} className="focus:outline-none">
-                          <Badge variant="outline" className={contact.review_status === 'seen'
-                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 cursor-pointer'
-                            : 'bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-100 cursor-pointer'}>
-                            {contact.review_status === 'seen' ? 'Seen' : 'Unseen'}
-                          </Badge>
-                        </button>
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Switch checked={contact.approval} onCheckedChange={() => void handleToggleApproval(contact)} aria-label="Toggle approval" />
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => void handleToggleContacted(contact)} className="focus:outline-none">
-                          {contact.contacted ? <Check className="h-5 w-5 text-emerald-600" /> : <X className="h-5 w-5 text-red-500" />}
-                        </button>
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Badge variant="outline" className={nextActionBadgeClass(contact.next_action)}>
-                          {formatNextAction(contact.next_action)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-2">
-                          <Popover
-                            open={noteOpenId === contact.id}
-                            onOpenChange={(open) => { setNoteOpenId(open ? contact.id : ''); if (open) setNoteDraft(contact.notes ?? ''); }}
-                          >
-                            <PopoverTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs">
-                                <NotebookPen className="h-3.5 w-3.5" />
-                                Add Note
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80" align="end">
-                              <div className="flex flex-col gap-2">
-                                <label className="text-sm font-medium">Nota</label>
-                                <textarea className="min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} />
-                                <div className="flex justify-end gap-2">
-                                  <Button size="sm" variant="ghost" onClick={() => setNoteOpenId('')}>Annulla</Button>
-                                  <Button size="sm" onClick={() => void handleSaveNote(contact.id)}>Salva</Button>
-                                </div>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                          <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs" disabled={!getPrimaryDmUrl(contact)} onClick={() => { const url = getPrimaryDmUrl(contact); if (url) window.open(url, '_blank', 'noopener,noreferrer'); }}>
-                            <MessageSquare className="h-3.5 w-3.5" />
-                            Direct Message
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+      <main className="flex-1 max-w-[1440px] mx-auto w-full p-6 space-y-6">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
+            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+              <Users className="h-5 w-5" />
             </div>
-            {renderPagination()}
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Profiles</span>
+              <span className="text-2xl font-bold">{kpi.total.toLocaleString()}</span>
+            </div>
           </div>
-        </section>
+          <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
+            <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+              <EyeOff className="h-5 w-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pending Review</span>
+              <span className="text-2xl font-bold">{kpi.pendingReview.toLocaleString()}</span>
+            </div>
+          </div>
+          <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
+            <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
+              <MailOpen className="h-5 w-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ready to Contact</span>
+              <span className="text-2xl font-bold">{kpi.readyToContact.toLocaleString()}</span>
+            </div>
+          </div>
+          <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
+            <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contacted</span>
+              <span className="text-2xl font-bold">{kpi.contacted.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="rounded-xl border bg-card shadow-sm">
+          <div className="p-4 flex flex-wrap items-center gap-3 border-b">
+            <div className="flex items-center gap-2 flex-1 min-w-[260px]">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input
+                placeholder="Cerca nome, email, social, employer..."
+                value={filters.query ?? ''}
+                onChange={(e) => handleFilterChange({ query: e.target.value })}
+                className="h-9"
+              />
+            </div>
+            <Select
+              value={filters.nextAction ?? 'all'}
+              onValueChange={(v) => handleFilterChange({ nextAction: v === 'all' ? 'all' : (v as NextAction) })}
+            >
+              <SelectTrigger className="w-[170px] h-9 bg-background">
+                <SelectValue placeholder="Next Action" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutte le azioni</SelectItem>
+                {NEXT_ACTION_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.reviewStatus ?? 'all'}
+              onValueChange={(v) => handleFilterChange({ reviewStatus: v as 'all' | 'seen' | 'unseen' })}
+            >
+              <SelectTrigger className="w-[150px] h-9 bg-background">
+                <SelectValue placeholder="Review Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutti</SelectItem>
+                <SelectItem value="seen">Seen</SelectItem>
+                <SelectItem value="unseen">Unseen</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.country ?? 'all'}
+              onValueChange={(v) => handleFilterChange({ country: v === 'all' ? undefined : v })}
+            >
+              <SelectTrigger className="w-[160px] h-9 bg-background">
+                <SelectValue placeholder="Paese" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutti i paesi</SelectItem>
+                {countries.map((c) => (
+                  <SelectItem key={c} value={c ?? ''}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="p-4 flex flex-wrap items-center justify-between gap-4 bg-muted/30">
+            <div className="flex flex-wrap gap-5 items-center">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={Boolean(filters.hasInstagram)} onCheckedChange={(v) => handleFilterChange({ hasInstagram: Boolean(v) })} />
+                <span className="text-muted-foreground">IG</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={Boolean(filters.hasLinkedin)} onCheckedChange={(v) => handleFilterChange({ hasLinkedin: Boolean(v) })} />
+                <span className="text-muted-foreground">LinkedIn</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={Boolean(filters.hasEmail)} onCheckedChange={(v) => handleFilterChange({ hasEmail: Boolean(v) })} />
+                <span className="text-muted-foreground">Email</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={Boolean(filters.approved)} onCheckedChange={(v) => handleFilterChange({ approved: v ? true : undefined })} />
+                <span className="text-muted-foreground">Approvati</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={Boolean(filters.contacted)} onCheckedChange={(v) => handleFilterChange({ contacted: v ? true : undefined })} />
+                <span className="text-muted-foreground">Contattati</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={Boolean(filters.assignedToMe)} onCheckedChange={(v) => handleFilterChange({ assignedToMe: Boolean(v), userId: userEmail })} />
+                <span className="text-muted-foreground">Assegnati a me</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={Boolean(filters.unassigned)} onCheckedChange={(v) => handleFilterChange({ unassigned: Boolean(v) })} />
+                <span className="text-muted-foreground">Non assegnati</span>
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Claim</span>
+              <Input
+                type="number"
+                min={1}
+                max={250}
+                value={claimCount}
+                onChange={(e) => setClaimCount(Number(e.target.value || '1'))}
+                className="w-16 h-8 text-center"
+              />
+              <Button size="sm" onClick={handleClaim}>Vai</Button>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {/* Table */}
+        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent bg-muted/50">
+                  <TableHead onClick={() => handleSort('full_name')} className="cursor-pointer whitespace-nowrap w-[240px]">Social Accounts</TableHead>
+                  <TableHead className="whitespace-nowrap w-[220px]">Restaurant / Location</TableHead>
+                  <TableHead className="whitespace-nowrap text-center">Review</TableHead>
+                  <TableHead className="whitespace-nowrap text-center">Approval</TableHead>
+                  <TableHead className="whitespace-nowrap text-center">Contacted</TableHead>
+                  <TableHead className="whitespace-nowrap text-center">Next Action</TableHead>
+                  <TableHead className="whitespace-nowrap">Azioni</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      <div className="flex items-center justify-center gap-2">
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Caricamento contatti...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!loading && !contacts.length && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      Nessun contatto trovato.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!loading && contacts.map((contact) => (
+                  <TableRow
+                    key={contact.id}
+                    className={`cursor-pointer transition-colors ${contact.id === selectedContactId ? 'bg-muted/60' : 'hover:bg-muted/40'}`}
+                    onClick={() => { setSelectedContactId(contact.id); setSheetOpen(true); }}
+                  >
+                    <TableCell>
+                      <div className="flex flex-col gap-1 py-1">
+                        <span className="font-semibold text-sm">{contact.full_name}</span>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          {contact.instagram_url && (
+                            <span className="flex items-center gap-1"><Instagram className="h-3 w-3 text-pink-600" />@{getSocialHandle(contact.instagram_url)}</span>
+                          )}
+                          {contact.linkedin_url && (
+                            <span className="flex items-center gap-1"><Linkedin className="h-3 w-3 text-blue-700" />{getSocialHandle(contact.linkedin_url)}</span>
+                          )}
+                          {!contact.instagram_url && !contact.linkedin_url && <span className="italic">Nessun social</span>}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1 py-1">
+                        <span className="text-sm font-medium">{contact.employer ?? '-'}</span>
+                        <span className="text-xs text-muted-foreground">{[contact.city, contact.country].filter(Boolean).join(', ') || '-'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
+                      <button
+                        onClick={() => {
+                          void updateContact(contact.id, { review_status: contact.review_status === 'seen' ? 'unseen' : 'seen' }).then(() => { void refreshContacts(); void refreshKpi(); });
+                        }}
+                        className="focus:outline-none"
+                      >
+                        <Badge
+                          variant="outline"
+                          className={contact.review_status === 'seen'
+                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 cursor-pointer'
+                            : 'bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-100 cursor-pointer'}
+                        >
+                          {contact.review_status === 'seen' ? 'Seen' : 'Unseen'}
+                        </Badge>
+                      </button>
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
+                      <Switch
+                        checked={contact.approval}
+                        onCheckedChange={() => void handleToggleApproval(contact)}
+                        aria-label="Toggle approval"
+                      />
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
+                      <button onClick={() => void handleToggleContacted(contact)} className="focus:outline-none inline-flex items-center justify-center h-8 w-8 rounded-full hover:bg-muted transition-colors">
+                        {contact.contacted ? (
+                          <Check className="h-5 w-5 text-emerald-600" />
+                        ) : (
+                          <X className="h-5 w-5 text-red-400" />
+                        )}
+                      </button>
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
+                      <Badge variant="outline" className={nextActionBadgeClass(contact.next_action)}>
+                        {formatNextAction(contact.next_action)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1">
+                        <Popover
+                          open={noteOpenId === contact.id}
+                          onOpenChange={(open) => { setNoteOpenId(open ? contact.id : ''); if (open) setNoteDraft(contact.notes ?? ''); }}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <NotebookPen className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80" align="end">
+                            <div className="flex flex-col gap-2">
+                              <label className="text-sm font-medium">Nota</label>
+                              <textarea
+                                className="min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                                value={noteDraft}
+                                onChange={(e) => setNoteDraft(e.target.value)}
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button size="sm" variant="ghost" onClick={() => setNoteOpenId('')}>Annulla</Button>
+                                <Button size="sm" onClick={() => void handleSaveNote(contact.id)}>Salva</Button>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={!getPrimaryDmUrl(contact)}
+                          onClick={() => {
+                            const url = getPrimaryDmUrl(contact);
+                            if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                          }}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {renderPagination()}
+        </div>
       </main>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -634,14 +708,14 @@ export default function OperatorePage() {
           <SheetHeader><SheetTitle>Dettaglio Persona</SheetTitle></SheetHeader>
           {selectedContact && (
             <div className="mt-6 flex flex-col gap-6">
-              <div className="detail-grid">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Email</span><Input value={detailDraft.email ?? ''} onChange={(e) => setDraftValue('email', e.target.value)} /></label>
                 <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Instagram</span><Input value={detailDraft.instagram_url ?? ''} onChange={(e) => setDraftValue('instagram_url', e.target.value)} /></label>
                 <label className="flex flex-col gap-1 text-sm"><span className="font-medium">LinkedIn</span><Input value={detailDraft.linkedin_url ?? ''} onChange={(e) => setDraftValue('linkedin_url', e.target.value)} /></label>
                 <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Employer</span><Input value={detailDraft.employer ?? ''} onChange={(e) => setDraftValue('employer', e.target.value)} /></label>
                 <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Title</span><Input value={detailDraft.title ?? ''} onChange={(e) => setDraftValue('title', e.target.value)} /></label>
                 <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Occupation</span><Input value={detailDraft.occupation ?? ''} onChange={(e) => setDraftValue('occupation', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Next Action</span>
+                <label className="flex flex-col gap-1 text-sm sm:col-span-2"><span className="font-medium">Next Action</span>
                   <Select value={detailDraft.next_action ?? 'none'} onValueChange={(v) => setDetailDraft((prev) => ({ ...prev, next_action: v === 'none' ? null : (v as NextAction) }))}>
                     <SelectTrigger><SelectValue placeholder="Seleziona azione" /></SelectTrigger>
                     <SelectContent>
