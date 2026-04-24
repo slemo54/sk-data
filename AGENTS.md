@@ -52,12 +52,10 @@ SUPABASE_SERVICE_ROLE_KEY=... VITE_SUPABASE_URL=... npm run import:contacts -- -
 
 ## Environment Variables
 
-Create a `.env` file (see `.env.example`):
+Configure environment variables in your deployment platform (e.g., Vercel) or create a local `.env` (git-ignored):
 
-```bash
-VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-```
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
 For ingestion scripts only:
 - `SUPABASE_SERVICE_ROLE_KEY` — must never be exposed to the browser.

@@ -11,11 +11,9 @@ Dashboard persone-first per workflow operativo su contatti unificati:
 npm install
 ```
 
-2. Crea `.env`:
-```bash
-VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-```
+2. Configura le variabili d'ambiente:
+   - Su **Vercel**: Vai in Settings > Environment Variables e inserisci `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
+   - In **Locale**: Crea un file `.env` (non incluso nel repository) con i valori del tuo progetto Supabase.
 
 3. Applica schema SQL in Supabase con [`supabase/schema.sql`](supabase/schema.sql).
 
