@@ -154,9 +154,9 @@ function buildGuildContact(row) {
 
 function buildWineAwardContacts(restaurants) {
   const roles = [
-    { key: 'wine_director', label: 'Wine Director' },
-    { key: 'sommelier', label: 'Sommelier' },
-    { key: 'general_manager', label: 'General Manager' },
+    { key: 'wine_director', suffix: 'wd', label: 'Wine Director' },
+    { key: 'sommelier', suffix: 'somm', label: 'Sommelier' },
+    { key: 'general_manager', suffix: 'gm', label: 'General Manager' },
   ];
 
   const contacts = [];
@@ -174,8 +174,8 @@ function buildWineAwardContacts(restaurants) {
         city: normalizeText(restaurant.city),
         country: normalizeText(restaurant.country),
         email: null,
-        instagram_url: null,
-        linkedin_url: null,
+        instagram_url: normalizeText(restaurant[`${role.suffix}_ig`]),
+        linkedin_url: normalizeText(restaurant[`${role.suffix}_li`]),
         employer: normalizeText(restaurant.restaurant),
         title: role.label,
         occupation: 'Hospitality',
