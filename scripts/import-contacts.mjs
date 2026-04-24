@@ -298,28 +298,36 @@ async function upsertSupabase(contacts) {
     'Content-Type': 'application/json',
   };
 
-  const contactsPayload = contacts.map((contact) => ({
-    full_name: contact.full_name,
-    normalized_name: contact.normalized_name,
-    city: contact.city,
-    country: contact.country,
-    email: contact.email,
-    instagram_url: contact.instagram_url,
-    linkedin_url: contact.linkedin_url,
-    employer: contact.employer,
-    title: contact.title,
-    occupation: contact.occupation,
-    cms_cert: contact.cms_cert,
-    review_status: contact.review_status ?? 'unseen',
-    next_action: contact.next_action ?? null,
-    approval: contact.approval ?? false,
-    contacted: contact.contacted ?? false,
-    notes: contact.notes ?? null,
-    status: contact.status,
-    assigned_to: contact.assigned_to,
-    claimed_at: contact.claimed_at,
-    reviewed_at: contact.reviewed_at,
-  }));
+  const seenKeys = new Set();
+  const contactsPayload = [];
+
+  contacts.forEach((contact) => {
+    const key = buildMatchKey(contact.full_name, contact.country, contact.city);
+    if (key && seenKeys.has(key)) {
+      return;
+    }
+    if (key) {
+      seenKeys.add(key);
+    }
+
+    contactsPayload.push({
+      full_name: contact.full_name,
+      normalized_name: contact.normalized_name,
+      city: contact.city,
+      country: contact.country,
+      email: contact.email,
+      instagram_url: contact.instagram_url,
+      linkedin_url: contact.linkedin_url,
+      employer: contact.employer,
+      title: contact.title,
+      occupation: contact.occupation,
+      cms_cert: contact.cms_cert,
+      status: contact.status || 'todo',
+      assigned_to: contact.assigned_to || null,
+      claimed_at: contact.claimed_at || null,
+      reviewed_at: contact.reviewed_at || null,
+    });
+  });
 
   const contactIdByKey = new Map();
 
