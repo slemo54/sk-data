@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import {
   Table,
@@ -371,15 +372,15 @@ export default function OperatorePage() {
 
   return (
     <div className="app-shell min-h-screen bg-background">
-      <header className="app-header">
+      <header className="app-header flex-col md:flex-row items-start md:items-center gap-3">
         <div className="header-left">
           <h1 className="text-2xl font-bold tracking-tight">
             SK <span className="text-muted-foreground font-semibold">DATABASE</span>
           </h1>
           <p className="text-sm text-muted-foreground">Backend Operatori</p>
         </div>
-        <div className="header-right">
-          <span className="text-sm text-muted-foreground hidden md:inline">{userEmail}</span>
+        <div className="header-right flex-wrap">
+          <span className="text-sm text-muted-foreground">{userEmail}</span>
           <Button variant="outline" size="sm" onClick={() => void refreshContacts()} className="gap-2">
             <RefreshCw className="h-4 w-4" />
             Refresh
@@ -395,28 +396,28 @@ export default function OperatorePage() {
       </header>
 
       <main className="main-content">
-        <section className="kpi-grid">
-          <div className="kpi-card">
-            <span className="kpi-label">TOTAL PROFILES</span>
-            <span className="kpi-value">{kpi.total.toLocaleString()}</span>
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div className="rounded-xl border bg-card p-4 shadow-sm flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total Profiles</span>
+            <span className="text-2xl font-bold">{kpi.total.toLocaleString()}</span>
           </div>
-          <div className="kpi-card">
-            <span className="kpi-label">PENDING REVIEW</span>
-            <span className="kpi-value">{kpi.pendingReview.toLocaleString()}</span>
+          <div className="rounded-xl border bg-card p-4 shadow-sm flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Pending Review</span>
+            <span className="text-2xl font-bold">{kpi.pendingReview.toLocaleString()}</span>
           </div>
-          <div className="kpi-card">
-            <span className="kpi-label">READY TO CONTACT</span>
-            <span className="kpi-value">{kpi.readyToContact.toLocaleString()}</span>
+          <div className="rounded-xl border bg-card p-4 shadow-sm flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Ready to Contact</span>
+            <span className="text-2xl font-bold">{kpi.readyToContact.toLocaleString()}</span>
           </div>
-          <div className="kpi-card">
-            <span className="kpi-label">CONTACTED</span>
-            <span className="kpi-value">{kpi.contacted.toLocaleString()}</span>
+          <div className="rounded-xl border bg-card p-4 shadow-sm flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Contacted</span>
+            <span className="text-2xl font-bold">{kpi.contacted.toLocaleString()}</span>
           </div>
         </section>
 
-        <section className="filters-bar">
+        <section className="flex flex-wrap items-center gap-2 bg-card border rounded-xl p-3">
           <div className="flex items-center gap-2 flex-1 min-w-[240px]">
-            <Search className="h-4 w-4 text-muted-foreground" />
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <Input
               placeholder="Cerca nome, email, social, employer..."
               value={filters.query ?? ''}
@@ -428,7 +429,7 @@ export default function OperatorePage() {
             value={filters.nextAction ?? 'all'}
             onValueChange={(v) => handleFilterChange({ nextAction: v === 'all' ? 'all' : (v as NextAction) })}
           >
-            <SelectTrigger className="w-[160px] h-9">
+            <SelectTrigger className="w-[160px] h-9 bg-background">
               <SelectValue placeholder="Next Action" />
             </SelectTrigger>
             <SelectContent>
@@ -442,7 +443,7 @@ export default function OperatorePage() {
             value={filters.reviewStatus ?? 'all'}
             onValueChange={(v) => handleFilterChange({ reviewStatus: v as 'all' | 'seen' | 'unseen' })}
           >
-            <SelectTrigger className="w-[150px] h-9">
+            <SelectTrigger className="w-[150px] h-9 bg-background">
               <SelectValue placeholder="Review Status" />
             </SelectTrigger>
             <SelectContent>
@@ -455,7 +456,7 @@ export default function OperatorePage() {
             value={filters.country ?? 'all'}
             onValueChange={(v) => handleFilterChange({ country: v === 'all' ? undefined : v })}
           >
-            <SelectTrigger className="w-[150px] h-9">
+            <SelectTrigger className="w-[150px] h-9 bg-background">
               <SelectValue placeholder="Paese" />
             </SelectTrigger>
             <SelectContent>
@@ -467,34 +468,34 @@ export default function OperatorePage() {
           </Select>
         </section>
 
-        <section className="sub-filters">
-          <div className="flex flex-wrap gap-3 items-center">
+        <section className="flex flex-wrap items-center justify-between gap-3 bg-muted/40 border rounded-lg p-3">
+          <div className="flex flex-wrap gap-4 items-center">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={Boolean(filters.hasInstagram)} onChange={(e) => handleFilterChange({ hasInstagram: e.target.checked })} />
+              <Checkbox checked={Boolean(filters.hasInstagram)} onCheckedChange={(v) => handleFilterChange({ hasInstagram: Boolean(v) })} />
               IG
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={Boolean(filters.hasLinkedin)} onChange={(e) => handleFilterChange({ hasLinkedin: e.target.checked })} />
+              <Checkbox checked={Boolean(filters.hasLinkedin)} onCheckedChange={(v) => handleFilterChange({ hasLinkedin: Boolean(v) })} />
               LinkedIn
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={Boolean(filters.hasEmail)} onChange={(e) => handleFilterChange({ hasEmail: e.target.checked })} />
+              <Checkbox checked={Boolean(filters.hasEmail)} onCheckedChange={(v) => handleFilterChange({ hasEmail: Boolean(v) })} />
               Email
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={Boolean(filters.approved)} onChange={(e) => handleFilterChange({ approved: e.target.checked ? true : undefined })} />
+              <Checkbox checked={Boolean(filters.approved)} onCheckedChange={(v) => handleFilterChange({ approved: v ? true : undefined })} />
               Approvati
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={Boolean(filters.contacted)} onChange={(e) => handleFilterChange({ contacted: e.target.checked ? true : undefined })} />
+              <Checkbox checked={Boolean(filters.contacted)} onCheckedChange={(v) => handleFilterChange({ contacted: v ? true : undefined })} />
               Contattati
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={Boolean(filters.assignedToMe)} onChange={(e) => handleFilterChange({ assignedToMe: e.target.checked, userId: userEmail })} />
+              <Checkbox checked={Boolean(filters.assignedToMe)} onCheckedChange={(v) => handleFilterChange({ assignedToMe: Boolean(v), userId: userEmail })} />
               Assegnati a me
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={Boolean(filters.unassigned)} onChange={(e) => handleFilterChange({ unassigned: e.target.checked })} />
+              <Checkbox checked={Boolean(filters.unassigned)} onCheckedChange={(v) => handleFilterChange({ unassigned: Boolean(v) })} />
               Non assegnati
             </label>
           </div>
