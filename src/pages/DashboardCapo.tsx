@@ -301,10 +301,12 @@ export default function DashboardCapo() {
           <h1 className="text-2xl font-bold tracking-tight">
             SK <span className="text-muted-foreground font-semibold">DATABASE</span>
           </h1>
-          <p className="text-sm text-muted-foreground">Dashboard Capo — Vista operativa</p>
+          <p className="text-sm text-muted-foreground">
+            {user ? 'Dashboard Capo — Vista operativa' : 'Dashboard Capo — Vista lettura'}
+          </p>
         </div>
         <div className="header-right">
-          <span className="text-sm text-muted-foreground hidden md:inline">{user?.email}</span>
+          {user && <span className="text-sm text-muted-foreground hidden md:inline">{user?.email}</span>}
           <Button variant="outline" size="sm" onClick={() => void refreshContacts()} className="gap-2">
             <RefreshCw className="h-4 w-4" />
             Refresh
@@ -312,10 +314,12 @@ export default function DashboardCapo() {
           {lastRefreshed && (
             <span className="text-xs text-muted-foreground hidden md:inline">{lastRefreshed}</span>
           )}
-          <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2">
-            <LogOut className="h-4 w-4" />
-            Esci
-          </Button>
+          {user && (
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2">
+              <LogOut className="h-4 w-4" />
+              Esci
+            </Button>
+          )}
         </div>
       </header>
 
@@ -471,20 +475,28 @@ export default function DashboardCapo() {
                         </div>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => void toggleField(contact, 'review_status')} className="focus:outline-none">
+                        {user ? (
+                          <button onClick={() => void toggleField(contact, 'review_status')} className="focus:outline-none">
+                            <Badge variant="outline" className={contact.review_status === 'seen'
+                              ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 cursor-pointer'
+                              : 'bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-100 cursor-pointer'}>
+                              {contact.review_status === 'seen' ? 'Seen' : 'Unseen'}
+                            </Badge>
+                          </button>
+                        ) : (
                           <Badge variant="outline" className={contact.review_status === 'seen'
-                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 cursor-pointer'
-                            : 'bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-100 cursor-pointer'}>
+                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                            : 'bg-yellow-100 text-yellow-700 border-yellow-200'}>
                             {contact.review_status === 'seen' ? 'Seen' : 'Unseen'}
                           </Badge>
-                        </button>
+                        )}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Switch checked={contact.approval} onCheckedChange={() => void toggleField(contact, 'approval')} aria-label="Toggle approval" />
+                        <Switch checked={contact.approval} onCheckedChange={() => void toggleField(contact, 'approval')} aria-label="Toggle approval" disabled={!user} />
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => void toggleField(contact, 'contacted')} className="focus:outline-none">
-                          {contact.contacted ? <Check className="h-5 w-5 text-emerald-600" /> : <X className="h-5 w-5 text-red-500" />}
+                        <button onClick={() => void toggleField(contact, 'contacted')} className="focus:outline-none" disabled={!user}>
+                          {contact.contacted ? <Check className={`h-5 w-5 ${user ? 'text-emerald-600' : 'text-emerald-600/60'}`} /> : <X className={`h-5 w-5 ${user ? 'text-red-500' : 'text-red-500/60'}`} />}
                         </button>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
@@ -508,30 +520,84 @@ export default function DashboardCapo() {
           {selectedContact && (
             <div className="mt-6 flex flex-col gap-6">
               <div className="detail-grid">
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Email</span><Input value={detailDraft.email ?? ''} onChange={(e) => setDraftValue('email', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Instagram</span><Input value={detailDraft.instagram_url ?? ''} onChange={(e) => setDraftValue('instagram_url', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">LinkedIn</span><Input value={detailDraft.linkedin_url ?? ''} onChange={(e) => setDraftValue('linkedin_url', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Employer</span><Input value={detailDraft.employer ?? ''} onChange={(e) => setDraftValue('employer', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Title</span><Input value={detailDraft.title ?? ''} onChange={(e) => setDraftValue('title', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Occupation</span><Input value={detailDraft.occupation ?? ''} onChange={(e) => setDraftValue('occupation', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Next Action</span>
-                  <Select value={detailDraft.next_action ?? 'none'} onValueChange={(v) => setDetailDraft((prev) => ({ ...prev, next_action: v === 'none' ? null : (v as NextAction) }))}>
-                    <SelectTrigger><SelectValue placeholder="Seleziona azione" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">—</SelectItem>
-                      {NEXT_ACTION_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium text-muted-foreground/70">Email</span>
+                  {user ? (
+                    <Input value={detailDraft.email ?? ''} onChange={(e) => setDraftValue('email', e.target.value)} />
+                  ) : (
+                    <div className="py-2 px-3 border rounded-md bg-muted/20 min-h-[40px] flex items-center">{detailDraft.email || '-'}</div>
+                  )}
                 </label>
-                <label className="flex flex-col gap-1 text-sm sm:col-span-2"><span className="font-medium">Note</span>
-                  <textarea className="min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" value={detailDraft.notes ?? ''} onChange={(e) => setDraftValue('notes', e.target.value)} />
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium text-muted-foreground/70">Instagram</span>
+                  {user ? (
+                    <Input value={detailDraft.instagram_url ?? ''} onChange={(e) => setDraftValue('instagram_url', e.target.value)} />
+                  ) : (
+                    <div className="py-2 px-3 border rounded-md bg-muted/20 min-h-[40px] flex items-center">{detailDraft.instagram_url || '-'}</div>
+                  )}
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium text-muted-foreground/70">LinkedIn</span>
+                  {user ? (
+                    <Input value={detailDraft.linkedin_url ?? ''} onChange={(e) => setDraftValue('linkedin_url', e.target.value)} />
+                  ) : (
+                    <div className="py-2 px-3 border rounded-md bg-muted/20 min-h-[40px] flex items-center">{detailDraft.linkedin_url || '-'}</div>
+                  )}
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium text-muted-foreground/70">Employer</span>
+                  {user ? (
+                    <Input value={detailDraft.employer ?? ''} onChange={(e) => setDraftValue('employer', e.target.value)} />
+                  ) : (
+                    <div className="py-2 px-3 border rounded-md bg-muted/20 min-h-[40px] flex items-center">{detailDraft.employer || '-'}</div>
+                  )}
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium text-muted-foreground/70">Title</span>
+                  {user ? (
+                    <Input value={detailDraft.title ?? ''} onChange={(e) => setDraftValue('title', e.target.value)} />
+                  ) : (
+                    <div className="py-2 px-3 border rounded-md bg-muted/20 min-h-[40px] flex items-center">{detailDraft.title || '-'}</div>
+                  )}
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium text-muted-foreground/70">Occupation</span>
+                  {user ? (
+                    <Input value={detailDraft.occupation ?? ''} onChange={(e) => setDraftValue('occupation', e.target.value)} />
+                  ) : (
+                    <div className="py-2 px-3 border rounded-md bg-muted/20 min-h-[40px] flex items-center">{detailDraft.occupation || '-'}</div>
+                  )}
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium text-muted-foreground/70">Next Action</span>
+                  {user ? (
+                    <Select value={detailDraft.next_action ?? 'none'} onValueChange={(v) => setDetailDraft((prev) => ({ ...prev, next_action: v === 'none' ? null : (v as NextAction) }))}>
+                      <SelectTrigger><SelectValue placeholder="Seleziona azione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">—</SelectItem>
+                        {NEXT_ACTION_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="py-2 px-3 border rounded-md bg-muted/20 min-h-[40px] flex items-center">{formatNextAction(detailDraft.next_action || null)}</div>
+                  )}
+                </label>
+                <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+                  <span className="font-medium text-muted-foreground/70">Note</span>
+                  {user ? (
+                    <textarea className="min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" value={detailDraft.notes ?? ''} onChange={(e) => setDraftValue('notes', e.target.value)} />
+                  ) : (
+                    <div className="py-3 px-3 border rounded-md bg-muted/20 min-h-[80px] text-sm whitespace-pre-wrap">{detailDraft.notes || '-'}</div>
+                  )}
                 </label>
               </div>
-              <div className="flex items-center gap-3">
-                <Button onClick={() => void handleSaveDetail()} disabled={saving}>{saving ? 'Salvataggio...' : 'Salva'}</Button>
-              </div>
+              {user && (
+                <div className="flex items-center gap-3">
+                  <Button onClick={() => void handleSaveDetail()} disabled={saving}>{saving ? 'Salvataggio...' : 'Salva'}</Button>
+                </div>
+              )}
               <div>
                 <h3 className="text-sm font-semibold mb-2">Provenienze</h3>
                 {!selectedSources.length && <p className="text-sm text-muted-foreground">Nessuna provenance disponibile.</p>}
