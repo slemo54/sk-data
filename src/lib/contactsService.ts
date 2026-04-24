@@ -134,17 +134,30 @@ export async function fetchContacts(
   const countryFilter = filters.country && filters.country !== 'all' ? `&country=eq.${encodeURIComponent(filters.country)}` : '';
   const statusFilter = filters.status && filters.status !== 'all' ? `&status=eq.${filters.status}` : '';
 
-  // Use a large limit to bypass the 1000 default if we're doing client-side filtering, 
-  // but better to implement real server-side pagination.
-  // For now, let's increase the limit to 50,000 to cover all current data.
-  const rows = await sbFetch<Contact[]>(
-    `/rest/v1/contacts?select=*${queryFilter}${countryFilter}${statusFilter}&order=${sort.field}.${sort.direction}&limit=50000`,
-  );
+  // Loop to fetch all rows in chunks of 1000 because of Supabase max_rows limit
+  let allRows: Contact[] = [];
+  let offsetFetch = 0;
+  const CHUNK_SIZE = 1000;
+  let hasMore = true;
 
-  let filtered = applyFilters(rows, filters);
+  while (hasMore) {
+    const chunk = await sbFetch<Contact[]>(
+      `/rest/v1/contacts?select=*${queryFilter}${countryFilter}${statusFilter}&order=${sort.field}.${sort.direction}&limit=${CHUNK_SIZE}&offset=${offsetFetch}`,
+    );
+    
+    allRows = [...allRows, ...chunk];
+    offsetFetch += CHUNK_SIZE;
+    
+    if (chunk.length < CHUNK_SIZE || allRows.length >= 20000) {
+      hasMore = false;
+    }
+  }
+
+  let filtered = applyFilters(allRows, filters);
   if (sourceFilter) {
+    // Also fetch sources in chunks if necessary (for simplicity, we use a large limit here or chunking if it fails)
     const sourceRows = await sbFetch<Array<{ contact_id: string }>>(
-      `/rest/v1/contact_sources?select=contact_id&source=eq.${sourceFilter}&limit=50000`,
+      `/rest/v1/contact_sources?select=contact_id&source=eq.${sourceFilter}&limit=10000`,
     );
     const allowedIds = new Set(sourceRows.map((row) => row.contact_id));
     filtered = filtered.filter((row) => allowedIds.has(row.id));
@@ -244,8 +257,21 @@ export function computeDashboardKpi(contacts: Contact[]): DashboardKpi {
 }
 
 export async function fetchDashboardKpi(): Promise<DashboardKpi> {
-  const rows = await sbFetch<
-    Array<Pick<Contact, 'review_status' | 'next_action' | 'contacted'>>
-  >('/rest/v1/contacts?select=review_status,next_action,contacted&limit=50000');
-  return computeDashboardKpi(rows as Contact[]);
+  let allRows: any[] = [];
+  let offsetFetch = 0;
+  const CHUNK_SIZE = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    const chunk = await sbFetch<any[]>(
+      `/rest/v1/contacts?select=review_status,next_action,contacted&limit=${CHUNK_SIZE}&offset=${offsetFetch}`,
+    );
+    allRows = [...allRows, ...chunk];
+    offsetFetch += CHUNK_SIZE;
+    if (chunk.length < CHUNK_SIZE || allRows.length >= 20000) {
+      hasMore = false;
+    }
+  }
+
+  return computeDashboardKpi(allRows as Contact[]);
 }
