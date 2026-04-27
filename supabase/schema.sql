@@ -262,5 +262,30 @@ for insert
 with check (true);
 
 -- Grants
+-- Mark contacts with both Instagram and LinkedIn as Ready to Contact
+-- Useful one-off or periodic batch operation
+create or replace function public.mark_social_ready()
+returns integer
+language plpgsql security definer set search_path = public as $$
+declare
+  affected integer;
+begin
+  update public.contacts
+  set next_action = 'pronto_da_contattare',
+      status = 'reviewed',
+      updated_at = now()
+  where instagram_url is not null
+    and instagram_url <> ''
+    and linkedin_url is not null
+    and linkedin_url <> ''
+    and next_action is distinct from 'pronto_da_contattare';
+
+  get diagnostics affected = row_count;
+  return affected;
+end;
+$$;
+
 grant execute on function public.claim_contacts(integer, text) to anon, authenticated;
+grant execute on function public.claim_single_contact(uuid, text) to anon, authenticated;
+grant execute on function public.mark_social_ready() to anon, authenticated;
 grant execute on function public.get_my_role() to anon, authenticated;
