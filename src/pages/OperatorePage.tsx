@@ -530,19 +530,30 @@ export default function OperatorePage() {
                 {!loading && contacts.map((contact) => {
                   const isMine = contact.assigned_to === userEmail;
                   const isLocked = !isMine;
+                  const rowBg = isMine
+                    ? 'bg-emerald-50/40'
+                    : contact.assigned_to
+                      ? 'bg-rose-50/40'
+                      : '';
                   return (
                     <TableRow
                       key={contact.id}
-                      className={`transition-colors ${contact.id === selectedContactId ? 'bg-muted/60' : 'hover:bg-muted/40'} ${isLocked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                      className={`transition-colors ${rowBg} ${contact.id === selectedContactId ? 'bg-muted/60' : 'hover:bg-muted/40'} ${isLocked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
                       onClick={() => { setSelectedContactId(contact.id); setSheetOpen(true); }}
                     >
-                      <TableCell className="py-2">
+                      <TableCell className="py-2 text-center">
                         {isMine ? (
-                          <div className="h-2 w-2 rounded-full bg-emerald-500 mx-auto" title="Assegnato a te" />
+                          <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]" title="Assegnato a te">
+                            Tu
+                          </Badge>
                         ) : contact.assigned_to ? (
-                          <div className="h-2 w-2 rounded-full bg-gray-400 mx-auto" title={`Assegnato a ${contact.assigned_to}`} />
+                          <Badge variant="outline" className="bg-rose-100 text-rose-700 border-rose-200 text-[10px]" title={`Assegnato a ${contact.assigned_to}`}>
+                            Occupato
+                          </Badge>
                         ) : (
-                          <div className="h-2 w-2 rounded-full bg-amber-400 mx-auto" title="Non assegnato" />
+                          <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px]" title="Non assegnato">
+                            Libero
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell>
