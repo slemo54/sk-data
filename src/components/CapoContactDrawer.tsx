@@ -54,7 +54,7 @@ export default function CapoContactDrawer({ contact, sources, open, onOpenChange
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-md overflow-y-auto p-[1%]">
         <SheetHeader>
           <SheetTitle>Dettaglio Persona</SheetTitle>
         </SheetHeader>
