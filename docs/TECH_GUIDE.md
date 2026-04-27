@@ -60,8 +60,10 @@ Operatrice clicca "Claim 25" → chiama RPC claim_contacts(25, 'mia@email.com')
 | Chi | Cosa fa | Risultato |
 |-----|---------|-----------|
 | **Operatrice** | Clicca "Pronto a contattare" nel drawer | `next_action = 'pronto_da_contattare'` + `status = 'reviewed'` + **toast success** |
+| **Operatrice** | Clicca "Claim questo contatto" nel drawer | Contatto riassegnato a lei (anche se era di un'altra). **Toast success** |
 | **SK** | Sceglie Next Action nel drawer | `next_action = da_approvare / follow_up / contattato / da_verificare / chiuso` + **toast success** |
 | **SK** | Toggle Review / Approval / Contacted | **Toast success** per ogni azione |
+| **SK** | Bulk approval — seleziona righe e clicca "Approva X" | `approval = true` su tutti i selezionati in parallelo. **Toast success** |
 
 ### RLS Policies (Sicurezza)
 - `contacts_select` — tutti possono leggere tutti i contatti (serve per la dashboard SK)
@@ -76,10 +78,16 @@ Operatrice clicca "Claim 25" → chiama RPC claim_contacts(25, 'mia@email.com')
 | `scripts/update-emails-from-guildsomm.mjs` | Recovery — aggiorna email mancanti nei contatti esistenti matchando per `profile_url` GuildSomm. |
 | `scripts/reset-all-claims.mjs` | Reset completo: `assigned_to = null, claimed_at = null, status = 'todo'` per TUTTI i contatti assegnati. |
 
+### RPC aggiuntivi
+| Funzione | Scopo |
+|----------|-------|
+| `claim_single_contact(contact_id, claim_user)` | Reclama / ruba un singolo contatto specifico (anche se già assegnato). Usato nel drawer operatore con bottone "Claim questo contatto". |
+| `mark_social_ready()` | Batch: marca come `pronto_da_contattare` + `reviewed` tutti i contatti che hanno **sia Instagram che LinkedIn** compilati. Restituisce il numero di righe aggiornate. |
+
 ### Schema SQL
 Tutto il DDL è in `supabase/schema.sql`:
 - Tabelle, indici, trigger (`set_updated_at`, `log_contact_changes`)
-- RPC `claim_contacts()`
+- RPC `claim_contacts()`, `claim_single_contact()`, `mark_social_ready()`
 - Funzione `get_my_role()`
 - RLS policies
 
@@ -130,28 +138,32 @@ Revisiona l'app navigando come **entrambi i ruoli** e identifica:
 #### Vista SK (Admin)
 1. Login con password-only → redirect a `/`
 2. Dashboard: KPI card, tabella contatti, filtri
-3. Filtri: IG, LinkedIn, Email, Approvati, Contattati, Seen/Unseen
+3. Filtri: IG, LinkedIn, Email, Approvati, Contattati, Seen/Unseen, **Next Action**, **Reset filtri**
 4. Click su riga → **auto-mark as Seen** + drawer read-only con card social cliccabili
 5. Click su link IG / LinkedIn / Mail in "Azioni" → **auto-mark as Seen** + apre link
 6. Toggle Review / Approval / Contacted direttamente in tabella → **toast success**
-7. Colonna "Social" mostra badge Completo/Parziale/Mancante
-8. Colonna "Assegnato" mostra email operatrice (se claimato)
-9. Badge "Note" giallo accanto al nome se ci sono note
-10. Sezione "Note operatore" sempre visibile nel drawer (anche se vuota)
-11. Next Action select nel drawer → **toast success**
-12. Click su KPI card "Ready to Contact" o "Contacted" → applica filtro automaticamente
-13. Sign-out → redirect a login
+7. **Bulk approval** — seleziona righe via checkbox, clicca "Approva X" in alto → approva in massa
+8. Colonna "Social" mostra badge Completo/Parziale/Mancante
+9. Colonna "Assegnato" mostra email operatrice (se claimato)
+10. Badge "Note" giallo accanto al nome se ci sono note
+11. Sezione "Note operatore" sempre visibile nel drawer (anche se vuota)
+12. Next Action select nel drawer → **toast success**
+13. Click su KPI card "Ready to Contact" o "Contacted" → applica filtro automaticamente
+14. Sign-out → redirect a login
 
 #### Vista Operatore
 1. Login email+password → redirect a `/operatore`
 2. Dashboard: KPI, tabella, filtri
-3. Filtro "Assegnati a me" / "Non assegnati"
+3. Filtri: **Assegnati a me** / **Non assegnati** / **Assegnati ad altri** / **Reset filtri**
 4. Claim X contatti → toast successo → auto-filtro assegnati
-5. Click su riga propria → drawer editabile con campi input (NO Next Action)
-6. Click su riga non assegnata → drawer con banner giallo "bloccato"
-7. Modifica campi, Note → Salva → refresh dati
-8. Bottone **"Pronto a contattare"** → setta `next_action = pronto_da_contattare` + `status = reviewed` + **toast success**
-9. Sign-out
+5. **Claim singolo** — apri qualsiasi contatto (anche di un'altra) e clicca **"Claim questo contatto"** nel drawer per riassegnartelo
+6. Click su riga propria → drawer editabile con campi input (NO Next Action)
+7. Click su riga non assegnata → drawer con banner giallo "bloccato"
+8. **Colori riga** — verde acqua = tuo, rosa = occupato da altri, bianco = libero. Badge "Tu" / "Occupato" / "Libero" nella prima colonna
+9. Modifica campi, Note → Salva → refresh dati
+10. Bottone **"Pronto a contattare"** → setta `next_action = pronto_da_contattare` + `status = reviewed` + **toast success**
+11. **KPI cliccabili** — "Ready to Contact" e "Contacted" applicano il filtro corrispondente
+12. Sign-out
 
 #### Edge Cases
 - Operatore prova a modificare contatto non suo → deve essere bloccato (RLS + UI)

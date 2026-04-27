@@ -11,13 +11,15 @@ Una tabella con tutti i contatti. Ogni riga è una persona del mondo wine.
 2. **Apri i social** — nella colonna "Azioni" ci sono i bottoni IG / LinkedIn / Mail. Clicca e si apre direttamente la pagina. Anche qui si segna automaticamente **Seen**.
 3. **Segna manualmente** — se vuoi, clicca sul badge "Unseen" per cambiarlo in "Seen" (o viceversa).
 4. **Approva per outreach** — switch "Approval" = sì se la persona è interessante da contattare
-5. **Segna se contattato** — icona ✓ = già contattato
-6. **Vedi le note** — se un'operatrice ha lasciato note, vedi l'icona 📄 gialla in "Azioni". Passa col mouse sopra per leggere.
-7. **Scegli Next Action** — nel drawer c'è il select "Next Action (SK)" per segnare cosa fare con quel contatto: Da approvare, Follow-up, Contattato, Da verificare, Chiuso.
+5. **Approva in massa** — seleziona più righe con le checkbox a sinistra, poi clicca **"Approva X"** in alto
+6. **Segna se contattato** — icona ✓ = già contattato
+7. **Vedi le note** — se un'operatrice ha lasciato note, vedi l'icona 📄 gialla in "Azioni". Passa col mouse sopra per leggere.
+8. **Scegli Next Action** — nel drawer c'è il select "Next Action (SK)" per segnare cosa fare con quel contatto: Da approvare, Follow-up, Contattato, Da verificare, Chiuso.
 
 ### Colonne importanti
 | Colonna | Cosa significa |
 |---------|----------------|
+| **☑️** | Checkbox per selezionare più righe e fare **bulk approval** |
 | **Nome** | Nome della persona + handle IG/LinkedIn se trovati |
 | **Stato Operatore** | `Da fare` / `In corso` / `Revisionato` = a che punto è l'operatrice |
 | **Social** | `Completo` = ha IG e LinkedIn. `Parziale` = solo uno. `Mancante` = nessuno. |
@@ -33,6 +35,8 @@ Una tabella con tutti i contatti. Ogni riga è una persona del mondo wine.
 - **Approvati** — solo quelli che hai già approvato
 - **Contattati** — solo quelli che hai già contattato
 - **Seen / Unseen** — per sapere cosa ti manca da guardare
+- **Next Action** — filtra per Pronto da contattare, Da approvare, Follow-up, ecc.
+- **Reset filtri** — torna a vista completa
 
 ### Scorciatoie KPI
 - Clicca su **"Ready to Contact"** nella card in alto → filtra automaticamente chi è pronto da contattare.
