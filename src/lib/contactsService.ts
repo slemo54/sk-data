@@ -92,6 +92,10 @@ function applyFilters(contacts: Contact[], filters: ContactsFilters): Contact[] 
       return false;
     }
 
+    if (filters.assignedToOthers && filters.userId && (!contact.assigned_to || contact.assigned_to === filters.userId)) {
+      return false;
+    }
+
     return true;
   });
 }
@@ -179,6 +183,14 @@ export async function claimContacts(count: number, userId: string): Promise<Cont
     method: 'POST',
     body: JSON.stringify({ claim_count: count, claim_user: userId }),
   });
+}
+
+export async function claimSingleContact(contactId: string, userId: string): Promise<Contact> {
+  const rows = await sbFetch<Contact[]>('/rest/v1/rpc/claim_single_contact', {
+    method: 'POST',
+    body: JSON.stringify({ contact_id: contactId, claim_user: userId }),
+  });
+  return rows[0];
 }
 
 export async function updateContact(contactId: string, patch: ContactPatch): Promise<Contact> {

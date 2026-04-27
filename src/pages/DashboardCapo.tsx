@@ -120,6 +120,8 @@ export default function DashboardSK() {
   const [selectedSources, setSelectedSources] = useState<ContactSource[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const selectedContact = useMemo(
     () => contacts.find((c) => c.id === selectedContactId) ?? null,
@@ -236,6 +238,62 @@ export default function DashboardSK() {
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      source: 'all',
+      status: 'all',
+      reviewStatus: 'all',
+      nextAction: 'all',
+    });
+    setPage(1);
+    setSelectedIds(new Set());
+  };
+
+  const handleToggleSelectAll = () => {
+    const visibleIds = contacts.map((c) => c.id);
+    const allSelected = visibleIds.every((id) => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        visibleIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        visibleIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkApprove = async () => {
+    if (!selectedIds.size) return;
+    setBulkSaving(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) => updateContact(id, { approval: true }))
+      );
+      toast.success(`${selectedIds.size} contatti approvati`);
+      setSelectedIds(new Set());
+      await refreshContacts();
+      await refreshKpi();
+    } catch (err) {
+      toast.error((err as Error).message || 'Bulk approval fallito');
+    } finally {
+      setBulkSaving(false);
+    }
   };
 
   const renderPagination = () => {
@@ -361,6 +419,23 @@ export default function DashboardSK() {
               </SelectContent>
             </Select>
             <Select
+              value={filters.nextAction ?? 'all'}
+              onValueChange={(v) => handleFilterChange({ nextAction: v === 'all' ? 'all' : (v as NextAction) })}
+            >
+              <SelectTrigger className="w-[170px] h-9 bg-background">
+                <SelectValue placeholder="Next Action" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutte le azioni</SelectItem>
+                <SelectItem value="pronto_da_contattare">Pronto da contattare</SelectItem>
+                <SelectItem value="da_approvare">Da approvare</SelectItem>
+                <SelectItem value="follow_up">Follow-up</SelectItem>
+                <SelectItem value="contattato">Contattato</SelectItem>
+                <SelectItem value="da_verificare">Da verificare</SelectItem>
+                <SelectItem value="chiuso">Chiuso</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
               value={filters.country ?? 'all'}
               onValueChange={(v) => handleFilterChange({ country: v === 'all' ? undefined : v })}
             >
@@ -397,6 +472,10 @@ export default function DashboardSK() {
               <Checkbox checked={Boolean(filters.contacted)} onCheckedChange={(v) => handleFilterChange({ contacted: v ? true : undefined })} />
               <span className="text-muted-foreground">Contattati</span>
             </label>
+            <div className="flex-1" />
+            <Button variant="ghost" size="sm" onClick={handleResetFilters} className="text-muted-foreground">
+              Reset filtri
+            </Button>
           </div>
         </div>
 
@@ -406,12 +485,31 @@ export default function DashboardSK() {
           </div>
         )}
 
+        {selectedIds.size > 0 && (
+          <div className="flex items-center justify-between rounded-xl border bg-card px-4 py-3 shadow-sm">
+            <span className="text-sm font-medium">
+              {selectedIds.size} selezionato{selectedIds.size > 1 ? 'i' : ''}
+            </span>
+            <Button size="sm" onClick={handleBulkApprove} disabled={bulkSaving} className="gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              {bulkSaving ? 'Approvo...' : `Approva ${selectedIds.size}`}
+            </Button>
+          </div>
+        )}
+
         {/* Table */}
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-muted/50">
+                  <TableHead className="w-[40px] text-center">
+                    <Checkbox
+                      checked={contacts.length > 0 && contacts.every((c) => selectedIds.has(c.id))}
+                      onCheckedChange={handleToggleSelectAll}
+                      aria-label="Seleziona tutti"
+                    />
+                  </TableHead>
                   <TableHead onClick={() => handleSort('full_name')} className="cursor-pointer whitespace-nowrap w-[220px]">Nome</TableHead>
                   <TableHead className="whitespace-nowrap w-[200px]">Restaurant / Location</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Stato Operatore</TableHead>
@@ -426,7 +524,7 @@ export default function DashboardSK() {
               <TableBody>
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         Caricamento contatti...
@@ -436,7 +534,7 @@ export default function DashboardSK() {
                 )}
                 {!loading && !contacts.length && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                       Nessun contatto trovato.
                     </TableCell>
                   </TableRow>
@@ -447,6 +545,13 @@ export default function DashboardSK() {
                     className={`cursor-pointer transition-colors ${contact.id === selectedContactId ? 'bg-muted/60' : 'hover:bg-muted/40'}`}
                     onClick={() => { void markSeen(contact); setSelectedContactId(contact.id); setSheetOpen(true); }}
                   >
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(contact.id)}
+                        onCheckedChange={() => handleToggleSelect(contact.id)}
+                        aria-label="Seleziona riga"
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1 py-1">
                         <div className="flex items-center gap-2">

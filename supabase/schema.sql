@@ -175,6 +175,23 @@ begin
 end;
 $$;
 
+-- Claim singolo contatto (riassegna anche se già assegnato)
+create or replace function public.claim_single_contact(contact_id uuid, claim_user text)
+returns setof public.contacts
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return query
+  update public.contacts
+  set assigned_to = claim_user,
+      claimed_at = now()
+  where id = contact_id
+  returning *;
+end;
+$$;
+
 -- RLS
 alter table public.contacts enable row level security;
 alter table public.contact_sources enable row level security;

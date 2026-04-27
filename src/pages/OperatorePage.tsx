@@ -6,6 +6,7 @@ import OperatorContactDrawer from '@/components/OperatorContactDrawer';
 import {
   // addNote,
   claimContacts,
+  claimSingleContact,
   fetchContacts,
   fetchContactSources,
   fetchDashboardKpi,
@@ -216,6 +217,19 @@ export default function OperatorePage() {
     }
   };
 
+  const handleClaimSingle = async () => {
+    if (!selectedContact) return;
+    try {
+      await claimSingleContact(selectedContact.id, userEmail);
+      toast.success('Contatto assegnato a te');
+      setSheetOpen(false);
+      await refreshContacts();
+      await refreshKpi();
+    } catch (err) {
+      toast.error((err as Error).message || 'Claim fallito');
+    }
+  };
+
   const handleSave = async (patch: ContactPatch) => {
     if (!selectedContact) return;
     try {
@@ -250,6 +264,16 @@ export default function OperatorePage() {
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      source: 'all',
+      status: 'all',
+      reviewStatus: 'all',
+      nextAction: 'all',
+    });
+    setPage(1);
   };
 
   const renderPagination = () => {
@@ -323,7 +347,13 @@ export default function OperatorePage() {
               <span className="text-2xl font-bold">{kpi.pendingReview.toLocaleString()}</span>
             </div>
           </div>
-          <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
+          <div
+            className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-accent/40 transition-colors"
+            onClick={() => {
+              setFilters((prev) => ({ ...prev, nextAction: 'pronto_da_contattare' }));
+              setPage(1);
+            }}
+          >
             <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
               <MessageSquare className="h-5 w-5" />
             </div>
@@ -332,7 +362,13 @@ export default function OperatorePage() {
               <span className="text-2xl font-bold">{kpi.readyToContact.toLocaleString()}</span>
             </div>
           </div>
-          <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
+          <div
+            className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-accent/40 transition-colors"
+            onClick={() => {
+              setFilters((prev) => ({ ...prev, contacted: true }));
+              setPage(1);
+            }}
+          >
             <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
               <Check className="h-5 w-5" />
             </div>
@@ -428,8 +464,15 @@ export default function OperatorePage() {
                 <Checkbox checked={Boolean(filters.unassigned)} onCheckedChange={(v) => handleFilterChange({ unassigned: Boolean(v) })} />
                 <span className="text-muted-foreground">Non assegnati</span>
               </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={Boolean(filters.assignedToOthers)} onCheckedChange={(v) => handleFilterChange({ assignedToOthers: Boolean(v), userId: userEmail })} />
+                <span className="text-muted-foreground">Assegnati ad altri</span>
+              </label>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={handleResetFilters} className="text-muted-foreground">
+                Reset filtri
+              </Button>
               <span className="text-sm text-muted-foreground">Claim</span>
               <Input
                 type="number"
@@ -462,13 +505,14 @@ export default function OperatorePage() {
                   <TableHead className="whitespace-nowrap text-center">Review</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Approval</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Contacted</TableHead>
+                  <TableHead className="whitespace-nowrap">Assegnato</TableHead>
                   <TableHead className="whitespace-nowrap">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         Caricamento contatti...
@@ -478,7 +522,7 @@ export default function OperatorePage() {
                 )}
                 {!loading && !contacts.length && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       Nessun contatto trovato.
                     </TableCell>
                   </TableRow>
@@ -557,6 +601,15 @@ export default function OperatorePage() {
                           {contact.contacted ? <Check className="h-5 w-5 text-emerald-600" /> : <X className="h-5 w-5 text-red-400" />}
                         </button>
                       </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {contact.assigned_to ? (
+                          <span className="truncate max-w-[140px] inline-block" title={contact.assigned_to}>
+                            {contact.assigned_to === userEmail ? 'Tu' : contact.assigned_to}
+                          </span>
+                        ) : (
+                          <span className="italic text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
                           <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isLocked} onClick={() => {
@@ -590,6 +643,9 @@ export default function OperatorePage() {
         onSave={handleSave}
         onReadyToContact={() => {
           if (selectedContact) void handleReadyToContact();
+        }}
+        onClaimSingle={() => {
+          if (selectedContact) void handleClaimSingle();
         }}
         saving={false}
       />

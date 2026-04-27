@@ -65,6 +65,7 @@ export interface ContactsFilters {
   contacted?: boolean;
   assignedToMe?: boolean;
   unassigned?: boolean;
+  assignedToOthers?: boolean;
   userId?: string;
 }
 
