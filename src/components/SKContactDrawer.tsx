@@ -107,62 +107,74 @@ export default function SKContactDrawer({ contact, sources, open, onOpenChange, 
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Social</h3>
             <div className="grid grid-cols-3 gap-2">
               {/* Instagram */}
-              <div className="rounded-xl border bg-card p-3 flex flex-col items-center text-center gap-1">
-                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                  <Instagram className="h-4 w-4" />
-                </div>
-                <p className="text-xs font-medium">Instagram</p>
-                {contact.instagram_url ? (
-                  <a
-                    href={contact.instagram_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] text-primary truncate w-full hover:underline"
-                  >
-                    Linked
-                  </a>
-                ) : (
+              {contact.instagram_url ? (
+                <a
+                  href={contact.instagram_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl border bg-card p-3 flex flex-col items-center text-center gap-1 hover:bg-accent/40 transition-colors"
+                >
+                  <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                    <Instagram className="h-4 w-4" />
+                  </div>
+                  <p className="text-xs font-medium">Instagram</p>
+                  <p className="text-[10px] text-primary truncate w-full">Linked</p>
+                </a>
+              ) : (
+                <div className="rounded-xl border bg-card p-3 flex flex-col items-center text-center gap-1 opacity-60">
+                  <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                    <Instagram className="h-4 w-4" />
+                  </div>
+                  <p className="text-xs font-medium">Instagram</p>
                   <p className="text-[10px] text-muted-foreground">Not linked</p>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* LinkedIn */}
-              <div className="rounded-xl border bg-card p-3 flex flex-col items-center text-center gap-1">
-                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                  <Linkedin className="h-4 w-4" />
-                </div>
-                <p className="text-xs font-medium">LinkedIn</p>
-                {contact.linkedin_url ? (
-                  <a
-                    href={contact.linkedin_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] text-primary truncate w-full hover:underline"
-                  >
-                    Linked
-                  </a>
-                ) : (
+              {contact.linkedin_url ? (
+                <a
+                  href={contact.linkedin_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl border bg-card p-3 flex flex-col items-center text-center gap-1 hover:bg-accent/40 transition-colors"
+                >
+                  <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                    <Linkedin className="h-4 w-4" />
+                  </div>
+                  <p className="text-xs font-medium">LinkedIn</p>
+                  <p className="text-[10px] text-primary truncate w-full">Linked</p>
+                </a>
+              ) : (
+                <div className="rounded-xl border bg-card p-3 flex flex-col items-center text-center gap-1 opacity-60">
+                  <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                    <Linkedin className="h-4 w-4" />
+                  </div>
+                  <p className="text-xs font-medium">LinkedIn</p>
                   <p className="text-[10px] text-muted-foreground">Not linked</p>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Email */}
-              <div className="rounded-xl border bg-card p-3 flex flex-col items-center text-center gap-1">
-                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                  <Mail className="h-4 w-4" />
-                </div>
-                <p className="text-xs font-medium">Email</p>
-                {contact.email ? (
-                  <a
-                    href={`mailto:${contact.email}`}
-                    className="text-[10px] text-primary truncate w-full hover:underline"
-                  >
-                    Linked
-                  </a>
-                ) : (
+              {contact.email ? (
+                <a
+                  href={`mailto:${contact.email}`}
+                  className="rounded-xl border bg-card p-3 flex flex-col items-center text-center gap-1 hover:bg-accent/40 transition-colors"
+                >
+                  <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <p className="text-xs font-medium">Email</p>
+                  <p className="text-[10px] text-primary truncate w-full">Linked</p>
+                </a>
+              ) : (
+                <div className="rounded-xl border bg-card p-3 flex flex-col items-center text-center gap-1 opacity-60">
+                  <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <p className="text-xs font-medium">Email</p>
                   <p className="text-[10px] text-muted-foreground">Not linked</p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
