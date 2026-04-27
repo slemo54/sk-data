@@ -93,7 +93,7 @@ export default function OperatorContactDrawer({
           <SheetTitle>Dettaglio Persona</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-5">
+        <div className="mt-6 space-y-6 px-2 pb-8">
           {isLocked && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-center gap-3 text-sm text-amber-800">
               <Lock className="h-4 w-4 shrink-0" />
@@ -105,28 +105,28 @@ export default function OperatorContactDrawer({
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label className="flex flex-col gap-1 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <label className="flex flex-col gap-2 text-sm">
               <span className="font-medium">Email</span>
               <Input value={draft.email ?? ''} onChange={(e) => setField('email', e.target.value)} disabled={isLocked} />
             </label>
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-2 text-sm">
               <span className="font-medium">Instagram</span>
               <Input value={draft.instagram_url ?? ''} onChange={(e) => setField('instagram_url', e.target.value)} disabled={isLocked} />
             </label>
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-2 text-sm">
               <span className="font-medium">LinkedIn</span>
               <Input value={draft.linkedin_url ?? ''} onChange={(e) => setField('linkedin_url', e.target.value)} disabled={isLocked} />
             </label>
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-2 text-sm">
               <span className="font-medium">Employer</span>
               <Input value={draft.employer ?? ''} onChange={(e) => setField('employer', e.target.value)} disabled={isLocked} />
             </label>
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-2 text-sm">
               <span className="font-medium">Title</span>
               <Input value={draft.title ?? ''} onChange={(e) => setField('title', e.target.value)} disabled={isLocked} />
             </label>
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-2 text-sm">
               <span className="font-medium">Occupation</span>
               <Input value={draft.occupation ?? ''} onChange={(e) => setField('occupation', e.target.value)} disabled={isLocked} />
             </label>
