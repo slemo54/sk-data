@@ -8,11 +8,11 @@ import { Input } from '@/components/ui/input';
 
 type UserRole = 'admin' | 'operator' | null;
 
-const CAPO_EMAIL = 'kim@mammajumboshrimp.com';
+const SK_EMAIL = 'kim@mammajumboshrimp.com';
 
 function extractRole(user: User | null): UserRole {
   if (!user) return null;
-  if (user.email === CAPO_EMAIL) return 'admin';
+  if (user.email === SK_EMAIL) return 'admin';
   const fromApp = (user.app_metadata?.role as string) ?? null;
   const fromUser = (user.user_metadata?.role as string) ?? null;
   const r = fromApp || fromUser;
@@ -38,9 +38,9 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [capoPassword, setCapoPassword] = useState('');
-  const [capoError, setCapoError] = useState('');
-  const [capoLoading, setCapoLoading] = useState(false);
+  const [skPassword, setSkPassword] = useState('');
+  const [skError, setSkError] = useState('');
+  const [skLoading, setSkLoading] = useState(false);
 
   useEffect(() => {
     if (user && role) {
@@ -74,21 +74,21 @@ export default function Login() {
     }
   };
 
-  const handleCapoLogin = async (e: React.FormEvent) => {
+  const handleSKLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCapoError('');
-    setCapoLoading(true);
+    setSkError('');
+    setSkLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: CAPO_EMAIL,
-        password: capoPassword,
+        email: SK_EMAIL,
+        password: skPassword,
       });
       if (error) throw error;
       navigate('/', { replace: true });
     } catch (err) {
-      setCapoError((err as Error).message || 'Password errata');
+      setSkError((err as Error).message || 'Password errata');
     } finally {
-      setCapoLoading(false);
+      setSkLoading(false);
     }
   };
 
@@ -160,26 +160,26 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Form Capo */}
-        <form onSubmit={handleCapoLogin} className="space-y-3">
+        {/* Form SK */}
+        <form onSubmit={handleSKLogin} className="space-y-3">
           <div className="text-center">
-            <p className="text-sm font-medium">Accesso Capo</p>
+            <p className="text-sm font-medium">Accesso SK</p>
             <p className="text-xs text-muted-foreground">Inserisci solo la password</p>
           </div>
           <Input
             type="password"
-            value={capoPassword}
-            onChange={(e) => setCapoPassword(e.target.value)}
-            placeholder="Password capo"
+            value={skPassword}
+            onChange={(e) => setSkPassword(e.target.value)}
+            placeholder="Password SK"
             required
           />
-          {capoError && (
+          {skError && (
             <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-              {capoError}
+              {skError}
             </div>
           )}
-          <Button type="submit" variant="outline" className="w-full" disabled={capoLoading}>
-            {capoLoading ? 'Attendere...' : 'Entra come Capo'}
+          <Button type="submit" variant="outline" className="w-full" disabled={skLoading}>
+            {skLoading ? 'Attendere...' : 'Entra come SK'}
           </Button>
         </form>
       </div>

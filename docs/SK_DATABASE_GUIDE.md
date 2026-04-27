@@ -33,18 +33,18 @@ Applicazione web per gestire contatti del mondo wine (sommelier, wine director, 
 | `instagram_url` | text | Link Instagram |
 | `linkedin_url` | text | Link LinkedIn |
 | `status` | enum | **todo** → **in_progress** → **reviewed** (workflow operatrice) |
-| `review_status` | enum | **seen** / **unseen** — il capo ha già guardato il profilo? |
-| `approval` | boolean | Il capo approva il contatto per l'outreach? |
-| `contacted` | boolean | Il capo ha già contattato la persona? |
+| `review_status` | enum | **seen** / **unseen** — il SK ha già guardato il profilo? |
+| `approval` | boolean | Il SK approva il contatto per l'outreach? |
+| `contacted` | boolean | Il SK ha già contattato la persona? |
 | `assigned_to` | text | Email dell'operatrice che ha fatto claim |
 | `claimed_at` | timestamptz | Quando è stato fatto il claim |
-| `next_action` | enum | Azione successiva scelta dal **capo** (Da approvare, Follow-up, Contattato, Da verificare, Chiuso). Gli operatori possono solo segnalare "Pronto da contattare". |
+| `next_action` | enum | Azione successiva scelta dal **SK** (Da approvare, Follow-up, Contattato, Da verificare, Chiuso). Gli operatori possono solo segnalare "Pronto da contattare". |
 | `notes` | text | Note libere dell'operatrice |
 
 ### Ruoli
 | Ruolo | Come si ottiene | Accesso |
 |-------|-----------------|---------|
-| **admin** (capo) | Email `kim@mammajumboshrimp.com` OPPURE in `admin_whitelist` | Dashboard Capo (`/`) — vede tutto, può togglare approval/contacted/review |
+| **admin** (SK) | Email `kim@mammajumboshrimp.com` OPPURE in `admin_whitelist` | Dashboard SK (`/`) — vede tutto, può togglare approval/contacted/review |
 | **operator** | Qualsiasi altro utente registrato | Dashboard Operatore (`/operatore`) — vede solo i propri assegnati |
 
 ### Claim System (Atomic & Bloccante)
@@ -59,10 +59,10 @@ Operatrice clicca "Claim 25" → chiama RPC claim_contacts(25, 'mia@email.com')
 | Chi | Cosa fa | Risultato |
 |-----|---------|-----------|
 | **Operatrice** | Clicca "Pronto a contattare" nel drawer | `next_action = 'pronto_da_contattare'` + `status = 'reviewed'` |
-| **Capo** | Sceglie Next Action nel drawer | `next_action = da_approvare / follow_up / contattato / da_verificare / chiuso` |
+| **SK** | Sceglie Next Action nel drawer | `next_action = da_approvare / follow_up / contattato / da_verificare / chiuso` |
 
 ### RLS Policies (Sicurezza)
-- `contacts_select` — tutti possono leggere tutti i contatti (serve per la dashboard capo)
+- `contacts_select` — tutti possono leggere tutti i contatti (serve per la dashboard SK)
 - `contacts_update` — solo **admin** OPPURE `assigned_to = mia email`
 - `contacts_insert` — aperto (serve per l'import script)
 - `logs_insert` — aperto (serve per il trigger audit)
@@ -88,7 +88,7 @@ Tutto il DDL è in `supabase/schema.sql`:
 ## 👑 PER IL CAPO — Guida Molto Semplice
 
 ### Come entro
-Vai su [link app] → inserisci solo la **password** nella sezione "Accesso Capo" → entri.
+Vai su [link app] → inserisci solo la **password** nella sezione "Accesso SK" → entri.
 
 ### Cosa vedo
 Una tabella con tutti i contatti. Ogni riga è una persona del mondo wine.
@@ -100,7 +100,7 @@ Una tabella con tutti i contatti. Ogni riga è una persona del mondo wine.
 4. **Approva per outreach** — switch "Approval" = sì se la persona è interessante da contattare
 5. **Segna se contattato** — icona ✓ = già contattato
 6. **Vedi le note** — se un'operatrice ha lasciato note, vedi l'icona 📄 gialla in "Azioni". Passa col mouse sopra per leggere.
-7. **Scegli Next Action** — nel drawer c'è il select "Next Action (Capo)" per segnare cosa fare con quel contatto: Da approvare, Follow-up, Contattato, Da verificare, Chiuso.
+7. **Scegli Next Action** — nel drawer c'è il select "Next Action (SK)" per segnare cosa fare con quel contatto: Da approvare, Follow-up, Contattato, Da verificare, Chiuso.
 
 ### Colonne importanti
 | Colonna | Cosa significa |
@@ -113,7 +113,7 @@ Una tabella con tutti i contatti. Ogni riga è una persona del mondo wine.
 | **Contacted** | Hai già mandato mail/messaggio? |
 | **Assegnato** | Email dell'operatrice che sta lavorando su questo contatto (se presente). |
 | **Azioni** | Bottoni per aprire IG / LinkedIn / Email. Icona 📄 gialla = ci sono note dell'operatrice. |
-| **Next Action (Capo)** | Nel drawer puoi scegliere: Da approvare, Follow-up, Contattato, Da verificare, Chiuso. **Non** c'è "Pronto da contattare" — quello lo mette l'operatrice. |
+| **Next Action (SK)** | Nel drawer puoi scegliere: Da approvare, Follow-up, Contattato, Da verificare, Chiuso. **Non** c'è "Pronto da contattare" — quello lo mette l'operatrice. |
 
 ### Filtri utili
 - **IG / LinkedIn / Email** — mostra solo chi ha quel dato
@@ -164,24 +164,24 @@ Per ogni contatto:
 | **Occupation** | Ruolo generale |
 | **Note** | Scrivi qualsiasi informazione utile |
 
-⚠️ **Non c'è più "Next Action"** — il capo lo gestisce. Tu premi solo **"Pronto a contattare"** quando hai finito.
+⚠️ **Non c'è più "Next Action"** — il SK lo gestisce. Tu premi solo **"Pronto a contattare"** quando hai finito.
 
 ### Passo 3 — Segnala "Pronto a contattare"
 Quando hai finito di cercare info su un contatto e non trovi altro, clicca il bottone **"Pronto a contattare"** nel drawer.
 
-Questo segnala al capo che:
+Questo segnala al SK che:
 - Hai completato il tuo lavoro su quel contatto
 - Il contatto passa in stato `reviewed`
-- Il capo lo vedrà come "Pronto da contattare" nella sua dashboard
+- Il SK lo vedrà come "Pronto da contattare" nella sua dashboard
 
-**Non c'è più "Avanza stato"** — il capo gestisce il Next Action.
+**Non c'è più "Avanza stato"** — il SK gestisce il Next Action.
 
 ### Cosa NON devi fare
 | ❌ Non fare | Perché |
 |-------------|--------|
 | Non fare claim se non hai tempo di lavorarci | Blocchi i contatti alle colleghe |
 | Non modificare contatti con banner giallo | Sono di un'altra operatrice |
-| Non lasciare campi vuoti se li trovi | Il capo ha bisogno di quei dati |
+| Non lasciare campi vuoti se li trovi | Il SK ha bisogno di quei dati |
 
 ### Casi speciali
 
@@ -191,25 +191,25 @@ Lascia i campi Instagram / LinkedIn vuoti. Scrivi in "Note": "Nessun social trov
 #### Caso B — Trovo solo Instagram (no LinkedIn)
 Compila solo Instagram. Lascia LinkedIn vuoto. Scrivi in "Note": "Manca LinkedIn" se vuoi segnalarlo.
 
-#### Caso C — Il capo mi dice di lavorare su un contatto specifico
-Chiedi al capo l'ID o il nome. Se il contatto è già assegnato a un'altra operatrice, il capo deve fare lui il re-assign (da admin può modificare tutto).
+#### Caso C — Il SK mi dice di lavorare su un contatto specifico
+Chiedi al SK l'ID o il nome. Se il contatto è già assegnato a un'altra operatrice, il SK deve fare lui il re-assign (da admin può modificare tutto).
 
 #### Caso D — Ho sbagliato, voglio "liberare" un contatto
-Non puoi farlo da sola. Scrivi al capo: "Contatto X assegnato per errore, puoi resettarlo?". Il capo può togliere l'assegnazione dalla sua dashboard.
+Non puoi farlo da sola. Scrivi al SK: "Contatto X assegnato per errore, puoi resettarlo?". Il SK può togliere l'assegnazione dalla sua dashboard.
 
 #### Caso E — Non vedo più contatti da claim
 Significa che:
 - Tutti i contatti sono già assegnati a te o alle colleghe, OPPURE
 - Tutti i contatti sono già in stato `reviewed`
 
-Se hai finito il tuo lavoro, comunica al capo che sei a posto.
+Se hai finito il tuo lavoro, comunica al SK che sei a posto.
 
 ---
 
 ## 🤖 PROMPT PER AGENTE AI REVISIONATORE
 
 ### Contesto
-Sei un QA engineer esperto di UI/UX e React. Devi revisionare l'applicazione **SK DATABASE**, un CRM operativo per il mondo wine, con due viste distinte: **Admin (Capo)** e **Operatore**.
+Sei un QA engineer esperto di UI/UX e React. Devi revisionare l'applicazione **SK DATABASE**, un CRM operativo per il mondo wine, con due viste distinte: **Admin (SK)** e **Operatore**.
 
 ### Stack
 - React 19 + TypeScript + Vite + Tailwind + shadcn/ui
@@ -236,7 +236,7 @@ Revisiona l'app navigando come **entrambi i ruoli** e identifica:
    - Azioni non intuitive (dove clicco? cosa fa questo bottone?)
    - Mancanza di feedback dopo un'azione (toast, loading, errori)
    - Flusso operatore confuso (claim → modifica → salva)
-   - Capo che vede troppa roba o troppo poca
+   - SK che vede troppa roba o troppo poca
 
 4. **Problemi di accessibilità / sicurezza**
    - Pagine che dovrebbero essere protette ma sono pubbliche
@@ -245,7 +245,7 @@ Revisiona l'app navigando come **entrambi i ruoli** e identifica:
 
 ### Scenari da testare
 
-#### Vista Capo (Admin)
+#### Vista SK (Admin)
 1. Login con password-only → redirect a `/`
 2. Dashboard: KPI card, tabella contatti, filtri
 3. Filtri: IG, LinkedIn, Email, Approvati, Contattati, Seen/Unseen
@@ -279,7 +279,7 @@ Revisiona l'app navigando come **entrambi i ruoli** e identifica:
 Per ogni problema trovato, restituisci:
 ```
 - **Severità**: [Critica / Alta / Media / Bassa]
-- **Vista**: [Capo / Operatore / Entrambe]
+- **Vista**: [SK / Operatore / Entrambe]
 - **Problema**: descrizione chiara
 - **Come riprodurre**: passaggi
 - **Suggerimento**: come risolvere

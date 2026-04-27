@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 import Login from '@/pages/Login';
-import DashboardCapo from '@/pages/DashboardCapo';
+import DashboardSK from '@/pages/DashboardCapo';
 import OperatorePage from '@/pages/OperatorePage';
 
 function ProtectedRoute({
@@ -42,7 +42,7 @@ export default function App() {
         path="/"
         element={
           <ProtectedRoute allowedRole="admin">
-            <DashboardCapo />
+            <DashboardSK />
           </ProtectedRoute>
         }
       />

@@ -17,7 +17,7 @@ import type {
   NextAction,
   ReviewVisibility,
 } from '@/types/contact';
-import CapoContactDrawer from '@/components/CapoContactDrawer';
+import SKContactDrawer from '@/components/SKContactDrawer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -99,7 +99,7 @@ function statusLabel(status: string): string {
   }
 }
 
-export default function DashboardCapo() {
+export default function DashboardSK() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -266,7 +266,7 @@ export default function DashboardCapo() {
             <h1 className="text-2xl font-bold tracking-tight">
               SK <span className="text-muted-foreground font-semibold">DATABASE</span>
             </h1>
-            <p className="text-sm text-muted-foreground">Dashboard Capo — Vista operativa</p>
+            <p className="text-sm text-muted-foreground">Dashboard SK — Vista operativa</p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm text-muted-foreground">{user?.email}</span>
@@ -552,7 +552,7 @@ export default function DashboardCapo() {
         </div>
       </main>
 
-      <CapoContactDrawer
+      <SKContactDrawer
         contact={selectedContact}
         sources={selectedSources}
         open={sheetOpen}
