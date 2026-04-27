@@ -32,7 +32,7 @@ Applicazione web per gestire contatti del mondo wine (sommelier, wine director, 
 | `email` | text | Email (spesso da GuildSomm) |
 | `instagram_url` | text | Link Instagram |
 | `linkedin_url` | text | Link LinkedIn |
-| `status` | enum | **todo** → **in_progress** → **reviewed** (workflow operatrice) |
+| `status` | enum | **todo** → **reviewed** (workflow operatrice). Dopo claim rimane `todo`. L'operatrice lo porta a `reviewed` con "Pronto a contattare". |
 | `review_status` | enum | **seen** / **unseen** — il SK ha già guardato il profilo? |
 | `approval` | boolean | Il SK approva il contatto per l'outreach? |
 | `contacted` | boolean | Il SK ha già contattato la persona? |
@@ -53,13 +53,14 @@ Operatrice clicca "Claim 25" → chiama RPC claim_contacts(25, 'mia@email.com')
 ```
 - Il DB prende **solo** contatti con `assigned_to IS NULL` e `status IN ('todo', 'in_progress')`
 - `FOR UPDATE SKIP LOCKED` = impossibile che due operatrici prendano lo stesso contatto
-- Dopo il claim, `status` diventa `in_progress`
+- Dopo il claim, `status` **rimane `todo`** (l'operatrice decide quando è pronta con il bottone "Pronto a contattare")
 
 ### Flusso Next Action
 | Chi | Cosa fa | Risultato |
 |-----|---------|-----------|
-| **Operatrice** | Clicca "Pronto a contattare" nel drawer | `next_action = 'pronto_da_contattare'` + `status = 'reviewed'` |
-| **SK** | Sceglie Next Action nel drawer | `next_action = da_approvare / follow_up / contattato / da_verificare / chiuso` |
+| **Operatrice** | Clicca "Pronto a contattare" nel drawer | `next_action = 'pronto_da_contattare'` + `status = 'reviewed'` + **toast success** |
+| **SK** | Sceglie Next Action nel drawer | `next_action = da_approvare / follow_up / contattato / da_verificare / chiuso` + **toast success** |
+| **SK** | Toggle Review / Approval / Contacted | **Toast success** per ogni azione |
 
 ### RLS Policies (Sicurezza)
 - `contacts_select` — tutti possono leggere tutti i contatti (serve per la dashboard SK)
@@ -162,7 +163,7 @@ Per ogni contatto:
 | **Employer** | Ristorante / azienda dove lavora |
 | **Title** | Titolo (es. Sommelier, Wine Director) |
 | **Occupation** | Ruolo generale |
-| **Note** | Scrivi qualsiasi informazione utile |
+| **Note** | Scrivi qualsiasi informazione utile. Le note sono il modo in cui scambi informazioni con il SK — lui le legge nel drawer. |
 
 ⚠️ **Non c'è più "Next Action"** — il SK lo gestisce. Tu premi solo **"Pronto a contattare"** quando hai finito.
 
@@ -173,6 +174,7 @@ Questo segnala al SK che:
 - Hai completato il tuo lavoro su quel contatto
 - Il contatto passa in stato `reviewed`
 - Il SK lo vedrà come "Pronto da contattare" nella sua dashboard
+- Appare un **toast di conferma**
 
 **Non c'è più "Avanza stato"** — il SK gestisce il Next Action.
 
@@ -251,12 +253,14 @@ Revisiona l'app navigando come **entrambi i ruoli** e identifica:
 3. Filtri: IG, LinkedIn, Email, Approvati, Contattati, Seen/Unseen
 4. Click su riga → **auto-mark as Seen** + drawer read-only con card social cliccabili
 5. Click su link IG / LinkedIn / Mail in "Azioni" → **auto-mark as Seen** + apre link
-6. Toggle Review / Approval / Contacted direttamente in tabella
+6. Toggle Review / Approval / Contacted direttamente in tabella → **toast success**
 7. Colonna "Social" mostra badge Completo/Parziale/Mancante
 8. Colonna "Assegnato" mostra email operatrice (se claimato)
-9. Icona 📄 in "Azioni" appare se ci sono note (tooltip al hover)
-10. Click su KPI card "Ready to Contact" o "Contacted" → applica filtro automaticamente
-11. Sign-out → redirect a login
+9. Badge "Note" giallo accanto al nome se ci sono note
+10. Sezione "Note operatore" sempre visibile nel drawer (anche se vuota)
+11. Next Action select nel drawer → **toast success**
+12. Click su KPI card "Ready to Contact" o "Contacted" → applica filtro automaticamente
+13. Sign-out → redirect a login
 
 #### Vista Operatore
 1. Login email+password → redirect a `/operatore`
@@ -266,7 +270,7 @@ Revisiona l'app navigando come **entrambi i ruoli** e identifica:
 5. Click su riga propria → drawer editabile con campi input (NO Next Action)
 6. Click su riga non assegnata → drawer con banner giallo "bloccato"
 7. Modifica campi, Note → Salva → refresh dati
-8. Bottone **"Pronto a contattare"** → setta `next_action = pronto_da_contattare` + `status = reviewed`
+8. Bottone **"Pronto a contattare"** → setta `next_action = pronto_da_contattare` + `status = reviewed` + **toast success**
 9. Sign-out
 
 #### Edge Cases
