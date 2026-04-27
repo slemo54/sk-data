@@ -30,6 +30,12 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Table,
   TableBody,
   TableCell,
@@ -45,6 +51,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   EyeOff,
+  FileText,
   Instagram,
   Linkedin,
   LogOut,
@@ -199,6 +206,18 @@ export default function DashboardCapo() {
     }
   };
 
+  const markSeen = async (contact: Contact) => {
+    if (contact.review_status === 'unseen') {
+      try {
+        await updateContact(contact.id, { review_status: 'seen' as ReviewVisibility });
+        await refreshContacts();
+        await refreshKpi();
+      } catch {
+        // silent fail
+      }
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
@@ -275,7 +294,10 @@ export default function DashboardCapo() {
               <span className="text-2xl font-bold">{kpi.pendingReview.toLocaleString()}</span>
             </div>
           </div>
-          <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
+          <div
+            className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => handleFilterChange({ nextAction: 'pronto_da_contattare' })}
+          >
             <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
               <MailOpen className="h-5 w-5" />
             </div>
@@ -284,7 +306,10 @@ export default function DashboardCapo() {
               <span className="text-2xl font-bold">{kpi.readyToContact.toLocaleString()}</span>
             </div>
           </div>
-          <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
+          <div
+            className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => handleFilterChange({ contacted: true })}
+          >
             <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
               <CheckCircle2 className="h-5 w-5" />
             </div>
@@ -379,13 +404,14 @@ export default function DashboardCapo() {
                   <TableHead className="whitespace-nowrap text-center">Review</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Approval</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Contacted</TableHead>
+                  <TableHead className="whitespace-nowrap text-center">Assegnato</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         Caricamento contatti...
@@ -395,7 +421,7 @@ export default function DashboardCapo() {
                 )}
                 {!loading && !contacts.length && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       Nessun contatto trovato.
                     </TableCell>
                   </TableRow>
@@ -404,7 +430,7 @@ export default function DashboardCapo() {
                   <TableRow
                     key={contact.id}
                     className={`cursor-pointer transition-colors ${contact.id === selectedContactId ? 'bg-muted/60' : 'hover:bg-muted/40'}`}
-                    onClick={() => { setSelectedContactId(contact.id); setSheetOpen(true); }}
+                    onClick={() => { void markSeen(contact); setSelectedContactId(contact.id); setSheetOpen(true); }}
                   >
                     <TableCell>
                       <div className="flex flex-col gap-1 py-1">
@@ -469,20 +495,37 @@ export default function DashboardCapo() {
                         {contact.contacted ? <Check className="h-5 w-5 text-emerald-600" /> : <X className="h-5 w-5 text-red-400" />}
                       </button>
                     </TableCell>
+                    <TableCell className="text-center text-xs text-muted-foreground truncate max-w-[120px]">
+                      {contact.assigned_to ?? '-'}
+                    </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
                       <div className="flex items-center justify-center gap-1">
+                        {contact.notes && (
+                          <TooltipProvider delayDuration={100}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600">
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <p className="text-xs whitespace-pre-wrap">{contact.notes}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         {contact.instagram_url && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(contact.instagram_url!, '_blank', 'noopener,noreferrer')}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { void markSeen(contact); window.open(contact.instagram_url!, '_blank', 'noopener,noreferrer'); }}>
                             <Instagram className="h-4 w-4 text-pink-600" />
                           </Button>
                         )}
                         {contact.linkedin_url && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(contact.linkedin_url!, '_blank', 'noopener,noreferrer')}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { void markSeen(contact); window.open(contact.linkedin_url!, '_blank', 'noopener,noreferrer'); }}>
                             <Linkedin className="h-4 w-4 text-blue-700" />
                           </Button>
                         )}
                         {contact.email && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(`mailto:${contact.email}`, '_blank')}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { void markSeen(contact); window.open(`mailto:${contact.email}`, '_blank'); }}>
                             <Mail className="h-4 w-4 text-emerald-600" />
                           </Button>
                         )}

@@ -88,11 +88,12 @@ Vai su [link app] → inserisci solo la **password** nella sezione "Accesso Capo
 Una tabella con tutti i contatti. Ogni riga è una persona del mondo wine.
 
 ### Cosa devo fare
-1. **Guarda i profili** — clicca su una riga per aprire il dettaglio
-2. **Apri i social** — nella colonna "Azioni" ci sono i bottoni IG / LinkedIn / Mail. Clicca e si apre direttamente la pagina.
-3. **Segna se hai già visto** — clicca su "Seen" / "Unseen" per ricordarti quali profili hai già guardato
+1. **Guarda i profili** — clicca su una riga per aprire il dettaglio. Si segna automaticamente **Seen** (visto).
+2. **Apri i social** — nella colonna "Azioni" ci sono i bottoni IG / LinkedIn / Mail. Clicca e si apre direttamente la pagina. Anche qui si segna automaticamente **Seen**.
+3. **Segna manualmente** — se vuoi, clicca sul badge "Unseen" per cambiarlo in "Seen" (o viceversa).
 4. **Approva per outreach** — switch "Approval" = sì se la persona è interessante da contattare
 5. **Segna se contattato** — icona ✓ = già contattato
+6. **Vedi le note** — se un'operatrice ha lasciato note, vedi l'icona 📄 gialla in "Azioni". Passa col mouse sopra per leggere.
 
 ### Colonne importanti
 | Colonna | Cosa significa |
@@ -100,16 +101,21 @@ Una tabella con tutti i contatti. Ogni riga è una persona del mondo wine.
 | **Nome** | Nome della persona + handle IG/LinkedIn se trovati |
 | **Stato Operatore** | `Da fare` / `In corso` / `Revisionato` = a che punto è l'operatrice |
 | **Social** | `Completo` = ha IG e LinkedIn. `Parziale` = solo uno. `Mancante` = nessuno. |
-| **Review** | `Seen` = tu l'hai già visto. `Unseen` = ancora da guardare. |
+| **Review** | `Seen` = tu l'hai già visto. `Unseen` = ancora da guardare. Si aggiorna automaticamente quando clicchi. |
 | **Approval** | Sei d'accordo a contattare questa persona? |
 | **Contacted** | Hai già mandato mail/messaggio? |
-| **Azioni** | Bottoni per aprire direttamente IG / LinkedIn / Email. |
+| **Assegnato** | Email dell'operatrice che sta lavorando su questo contatto (se presente). |
+| **Azioni** | Bottoni per aprire IG / LinkedIn / Email. Icona 📄 gialla = ci sono note dell'operatrice. |
 
 ### Filtri utili
 - **IG / LinkedIn / Email** — mostra solo chi ha quel dato
 - **Approvati** — solo quelli che hai già approvato
 - **Contattati** — solo quelli che hai già contattato
 - **Seen / Unseen** — per sapere cosa ti manca da guardare
+
+### Scorciatoie KPI
+- Clicca su **"Ready to Contact"** nella card in alto → filtra automaticamente chi è pronto da contattare.
+- Clicca su **"Contacted"** → filtra chi hai già contattato.
 
 ---
 
@@ -231,11 +237,14 @@ Revisiona l'app navigando come **entrambi i ruoli** e identifica:
 1. Login con password-only → redirect a `/`
 2. Dashboard: KPI card, tabella contatti, filtri
 3. Filtri: IG, LinkedIn, Email, Approvati, Contattati, Seen/Unseen
-4. Click su riga → drawer read-only con card social cliccabili
-5. Toggle Review / Approval / Contacted direttamente in tabella
-6. Colonna "Social" mostra badge Completo/Parziale/Mancante
-7. Colonna "Azioni" apre IG / LinkedIn / Mail in nuovo tab
-8. Sign-out → redirect a login
+4. Click su riga → **auto-mark as Seen** + drawer read-only con card social cliccabili
+5. Click su link IG / LinkedIn / Mail in "Azioni" → **auto-mark as Seen** + apre link
+6. Toggle Review / Approval / Contacted direttamente in tabella
+7. Colonna "Social" mostra badge Completo/Parziale/Mancante
+8. Colonna "Assegnato" mostra email operatrice (se claimato)
+9. Icona 📄 in "Azioni" appare se ci sono note (tooltip al hover)
+10. Click su KPI card "Ready to Contact" o "Contacted" → applica filtro automaticamente
+11. Sign-out → redirect a login
 
 #### Vista Operatore
 1. Login email+password → redirect a `/operatore`
