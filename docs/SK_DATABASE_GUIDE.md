@@ -38,7 +38,7 @@ Applicazione web per gestire contatti del mondo wine (sommelier, wine director, 
 | `contacted` | boolean | Il capo ha già contattato la persona? |
 | `assigned_to` | text | Email dell'operatrice che ha fatto claim |
 | `claimed_at` | timestamptz | Quando è stato fatto il claim |
-| `next_action` | enum | Azione successiva scelta dall'operatrice |
+| `next_action` | enum | Azione successiva scelta dal **capo** (Da approvare, Follow-up, Contattato, Da verificare, Chiuso). Gli operatori possono solo segnalare "Pronto da contattare". |
 | `notes` | text | Note libere dell'operatrice |
 
 ### Ruoli
@@ -54,6 +54,12 @@ Operatrice clicca "Claim 25" → chiama RPC claim_contacts(25, 'mia@email.com')
 - Il DB prende **solo** contatti con `assigned_to IS NULL` e `status IN ('todo', 'in_progress')`
 - `FOR UPDATE SKIP LOCKED` = impossibile che due operatrici prendano lo stesso contatto
 - Dopo il claim, `status` diventa `in_progress`
+
+### Flusso Next Action
+| Chi | Cosa fa | Risultato |
+|-----|---------|-----------|
+| **Operatrice** | Clicca "Pronto a contattare" nel drawer | `next_action = 'pronto_da_contattare'` + `status = 'reviewed'` |
+| **Capo** | Sceglie Next Action nel drawer | `next_action = da_approvare / follow_up / contattato / da_verificare / chiuso` |
 
 ### RLS Policies (Sicurezza)
 - `contacts_select` — tutti possono leggere tutti i contatti (serve per la dashboard capo)
@@ -94,6 +100,7 @@ Una tabella con tutti i contatti. Ogni riga è una persona del mondo wine.
 4. **Approva per outreach** — switch "Approval" = sì se la persona è interessante da contattare
 5. **Segna se contattato** — icona ✓ = già contattato
 6. **Vedi le note** — se un'operatrice ha lasciato note, vedi l'icona 📄 gialla in "Azioni". Passa col mouse sopra per leggere.
+7. **Scegli Next Action** — nel drawer c'è il select "Next Action (Capo)" per segnare cosa fare con quel contatto: Da approvare, Follow-up, Contattato, Da verificare, Chiuso.
 
 ### Colonne importanti
 | Colonna | Cosa significa |
@@ -106,6 +113,7 @@ Una tabella con tutti i contatti. Ogni riga è una persona del mondo wine.
 | **Contacted** | Hai già mandato mail/messaggio? |
 | **Assegnato** | Email dell'operatrice che sta lavorando su questo contatto (se presente). |
 | **Azioni** | Bottoni per aprire IG / LinkedIn / Email. Icona 📄 gialla = ci sono note dell'operatrice. |
+| **Next Action (Capo)** | Nel drawer puoi scegliere: Da approvare, Follow-up, Contattato, Da verificare, Chiuso. **Non** c'è "Pronto da contattare" — quello lo mette l'operatrice. |
 
 ### Filtri utili
 - **IG / LinkedIn / Email** — mostra solo chi ha quel dato
@@ -154,15 +162,19 @@ Per ogni contatto:
 | **Employer** | Ristorante / azienda dove lavora |
 | **Title** | Titolo (es. Sommelier, Wine Director) |
 | **Occupation** | Ruolo generale |
-| **Next Action** | Cosa fare dopo? (es. "Pronto da contattare", "Da approvare") |
 | **Note** | Scrivi qualsiasi informazione utile |
 
-### Passo 3 — Avanza lo stato
-Quando hai finito di controllare un contatto, clicca **"Avanza stato"**:
-- Da `todo` → diventa `in_progress`
-- Da `in_progress` → diventa `reviewed`
+⚠️ **Non c'è più "Next Action"** — il capo lo gestisce. Tu premi solo **"Pronto a contattare"** quando hai finito.
 
-Un contatto `reviewed` significa che hai finito il tuo lavoro su quella persona.
+### Passo 3 — Segnala "Pronto a contattare"
+Quando hai finito di cercare info su un contatto e non trovi altro, clicca il bottone **"Pronto a contattare"** nel drawer.
+
+Questo segnala al capo che:
+- Hai completato il tuo lavoro su quel contatto
+- Il contatto passa in stato `reviewed`
+- Il capo lo vedrà come "Pronto da contattare" nella sua dashboard
+
+**Non c'è più "Avanza stato"** — il capo gestisce il Next Action.
 
 ### Cosa NON devi fare
 | ❌ Non fare | Perché |
@@ -177,7 +189,7 @@ Un contatto `reviewed` significa che hai finito il tuo lavoro su quella persona.
 Lascia i campi Instagram / LinkedIn vuoti. Scrivi in "Note": "Nessun social trovato". Avanza lo stato a `reviewed`.
 
 #### Caso B — Trovo solo Instagram (no LinkedIn)
-Compila solo Instagram. Lascia LinkedIn vuoto. In "Next Action" metti "Da verificare" se pensi che qualcuno altro possa trovarlo.
+Compila solo Instagram. Lascia LinkedIn vuoto. Scrivi in "Note": "Manca LinkedIn" se vuoi segnalarlo.
 
 #### Caso C — Il capo mi dice di lavorare su un contatto specifico
 Chiedi al capo l'ID o il nome. Se il contatto è già assegnato a un'altra operatrice, il capo deve fare lui il re-assign (da admin può modificare tutto).
@@ -251,10 +263,10 @@ Revisiona l'app navigando come **entrambi i ruoli** e identifica:
 2. Dashboard: KPI, tabella, filtri
 3. Filtro "Assegnati a me" / "Non assegnati"
 4. Claim X contatti → toast successo → auto-filtro assegnati
-5. Click su riga propria → drawer editabile con campi input
+5. Click su riga propria → drawer editabile con campi input (NO Next Action)
 6. Click su riga non assegnata → drawer con banner giallo "bloccato"
-7. Modifica campi, Next Action, Note → Salva → refresh dati
-8. "Avanza stato" → da todo a in_progress a reviewed
+7. Modifica campi, Note → Salva → refresh dati
+8. Bottone **"Pronto a contattare"** → setta `next_action = pronto_da_contattare` + `status = reviewed`
 9. Sign-out
 
 #### Edge Cases
