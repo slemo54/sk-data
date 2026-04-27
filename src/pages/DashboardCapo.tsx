@@ -14,6 +14,7 @@ import type {
   ContactSort,
   ContactsFilters,
   DashboardKpi,
+  NextAction,
   ReviewVisibility,
 } from '@/types/contact';
 import CapoContactDrawer from '@/components/CapoContactDrawer';
@@ -215,6 +216,17 @@ export default function DashboardCapo() {
       } catch {
         // silent fail
       }
+    }
+  };
+
+  const handleUpdateNextAction = async (nextAction: NextAction | null) => {
+    if (!selectedContact) return;
+    try {
+      await updateContact(selectedContact.id, { next_action: nextAction });
+      await refreshContacts();
+      await refreshKpi();
+    } catch (err) {
+      setError((err as Error).message || 'Aggiornamento fallito');
     }
   };
 
@@ -545,6 +557,7 @@ export default function DashboardCapo() {
         sources={selectedSources}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+        onUpdateNextAction={handleUpdateNextAction}
       />
     </div>
   );

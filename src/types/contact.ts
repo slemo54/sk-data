@@ -104,6 +104,7 @@ export interface ContactPatch {
   approval?: boolean;
   contacted?: boolean;
   notes?: string | null;
+  status?: ReviewStatus;
 }
 
 export interface DashboardKpi {

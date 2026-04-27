@@ -1,26 +1,11 @@
 import { useState, useEffect } from 'react';
-import type { Contact, ContactSource, ContactPatch, NextAction } from '@/types/contact';
+import type { Contact, ContactSource, ContactPatch } from '@/types/contact';
 // import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+// Removed Select imports - next action moved to admin
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Lock, ExternalLink } from 'lucide-react';
-
-const NEXT_ACTION_OPTIONS: { value: NextAction; label: string }[] = [
-  { value: 'pronto_da_contattare', label: 'Pronto da contattare' },
-  { value: 'da_approvare', label: 'Da approvare' },
-  { value: 'follow_up', label: 'Follow-up' },
-  { value: 'contattato', label: 'Contattato' },
-  { value: 'da_verificare', label: 'Da verificare' },
-  { value: 'chiuso', label: 'Chiuso' },
-];
 
 interface Props {
   contact: Contact | null;
@@ -29,7 +14,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (patch: ContactPatch) => void;
-  onStatusAdvance: () => void;
+  onReadyToContact: () => void;
   saving: boolean;
 }
 
@@ -40,7 +25,7 @@ export default function OperatorContactDrawer({
   open,
   onOpenChange,
   onSave,
-  onStatusAdvance,
+  onReadyToContact,
   saving,
 }: Props) {
   const [draft, setDraft] = useState<ContactPatch>({});
@@ -57,7 +42,6 @@ export default function OperatorContactDrawer({
       employer: contact.employer,
       title: contact.title,
       occupation: contact.occupation,
-      next_action: contact.next_action,
       notes: contact.notes,
     });
   }, [contact]);
@@ -80,7 +64,6 @@ export default function OperatorContactDrawer({
       employer: draft.employer?.trim() || null,
       title: draft.title?.trim() || null,
       occupation: draft.occupation?.trim() || null,
-      next_action: draft.next_action ?? null,
       notes: draft.notes?.trim() || null,
     };
     onSave(patch);
@@ -131,24 +114,6 @@ export default function OperatorContactDrawer({
               <Input value={draft.occupation ?? ''} onChange={(e) => setField('occupation', e.target.value)} disabled={isLocked} />
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium">Next Action</span>
-              <Select
-                value={draft.next_action ?? 'none'}
-                onValueChange={(v) => setDraft((prev) => ({ ...prev, next_action: v === 'none' ? null : (v as NextAction) }))}
-                disabled={isLocked}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona azione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">—</SelectItem>
-                  {NEXT_ACTION_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
               <span className="font-medium">Note</span>
               <textarea
                 className="min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
@@ -163,8 +128,8 @@ export default function OperatorContactDrawer({
             <Button onClick={handleSave} disabled={saving || isLocked}>
               {saving ? 'Salvataggio...' : 'Salva'}
             </Button>
-            <Button variant="outline" size="sm" onClick={onStatusAdvance} disabled={isLocked}>
-              Avanza stato ({contact.status})
+            <Button variant="outline" size="sm" onClick={onReadyToContact} disabled={isLocked || contact.next_action === 'pronto_da_contattare'}>
+              Pronto a contattare
             </Button>
           </div>
 

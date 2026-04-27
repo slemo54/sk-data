@@ -1,6 +1,12 @@
-import type { Contact, ContactSource } from '@/types/contact';
+import type { Contact, ContactSource, NextAction } from '@/types/contact';
 import { Badge } from '@/components/ui/badge';
-// Removed unused Button import
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Building2,
@@ -16,11 +22,20 @@ import {
   FileText,
 } from 'lucide-react';
 
+const ADMIN_NEXT_ACTION_OPTIONS: { value: NextAction; label: string }[] = [
+  { value: 'da_approvare', label: 'Da approvare' },
+  { value: 'follow_up', label: 'Follow-up' },
+  { value: 'contattato', label: 'Contattato' },
+  { value: 'da_verificare', label: 'Da verificare' },
+  { value: 'chiuso', label: 'Chiuso' },
+];
+
 interface Props {
   contact: Contact | null;
   sources: ContactSource[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onUpdateNextAction: (nextAction: NextAction | null) => void;
 }
 
 function statusBadge(status: string) {
@@ -49,7 +64,7 @@ function statusLabel(status: string) {
   }
 }
 
-export default function CapoContactDrawer({ contact, sources, open, onOpenChange }: Props) {
+export default function CapoContactDrawer({ contact, sources, open, onOpenChange, onUpdateNextAction }: Props) {
   if (!contact) return null;
 
   return (
@@ -231,6 +246,27 @@ export default function CapoContactDrawer({ contact, sources, open, onOpenChange
                   <span className="text-sm font-medium">{contact.assigned_to}</span>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Next Action — solo admin */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Next Action (Capo)</h3>
+            <div className="rounded-lg border bg-card p-4 space-y-3">
+              <Select
+                value={contact.next_action ?? 'none'}
+                onValueChange={(v) => onUpdateNextAction(v === 'none' ? null : (v as NextAction))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleziona azione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">—</SelectItem>
+                  {ADMIN_NEXT_ACTION_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

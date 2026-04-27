@@ -9,7 +9,6 @@ import {
   fetchContacts,
   fetchContactSources,
   fetchDashboardKpi,
-  setContactStatus,
   toggleApproval,
   toggleContacted,
   updateContact,
@@ -22,7 +21,6 @@ import type {
   ContactsFilters,
   DashboardKpi,
   NextAction,
-  ReviewStatus,
 } from '@/types/contact';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -78,12 +76,6 @@ const NEXT_ACTION_OPTIONS: { value: NextAction; label: string }[] = [
   { value: 'da_verificare', label: 'Da verificare' },
   { value: 'chiuso', label: 'Chiuso' },
 ];
-
-function getNextStatus(current: ReviewStatus): ReviewStatus {
-  if (current === 'todo') return 'in_progress';
-  if (current === 'in_progress') return 'reviewed';
-  return 'reviewed';
-}
 
 export default function OperatorePage() {
   const { user, signOut } = useAuth();
@@ -209,13 +201,17 @@ export default function OperatorePage() {
     }
   };
 
-  const handleStatusAdvance = async (contactId: string, currentStatus: ReviewStatus) => {
+  const handleReadyToContact = async () => {
+    if (!selectedContact) return;
     try {
-      await setContactStatus(contactId, getNextStatus(currentStatus));
+      await updateContact(selectedContact.id, {
+        next_action: 'pronto_da_contattare',
+        status: 'reviewed',
+      });
       await refreshContacts();
       await refreshKpi();
     } catch (err) {
-      setError((err as Error).message || 'Status update failed');
+      setError((err as Error).message || 'Aggiornamento fallito');
     }
   };
 
@@ -591,8 +587,8 @@ export default function OperatorePage() {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         onSave={handleSave}
-        onStatusAdvance={() => {
-          if (selectedContact) void handleStatusAdvance(selectedContact.id, selectedContact.status);
+        onReadyToContact={() => {
+          if (selectedContact) void handleReadyToContact();
         }}
         saving={false}
       />
