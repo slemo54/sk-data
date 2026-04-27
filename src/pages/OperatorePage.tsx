@@ -85,30 +85,6 @@ function getNextStatus(current: ReviewStatus): ReviewStatus {
   return 'reviewed';
 }
 
-function nextActionBadgeClass(action: NextAction | null): string {
-  switch (action) {
-    case 'pronto_da_contattare':
-      return 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100';
-    case 'da_approvare':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100';
-    case 'follow_up':
-      return 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100';
-    case 'contattato':
-      return 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100';
-    case 'da_verificare':
-      return 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-100';
-    case 'chiuso':
-      return 'bg-gray-800 text-white border-gray-700 hover:bg-gray-800';
-    default:
-      return 'bg-muted text-muted-foreground border-transparent';
-  }
-}
-
-function formatNextAction(action: NextAction | null): string {
-  if (!action) return '-';
-  return NEXT_ACTION_OPTIONS.find((o) => o.value === action)?.label ?? action;
-}
-
 export default function OperatorePage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -489,14 +465,13 @@ export default function OperatorePage() {
                   <TableHead className="whitespace-nowrap text-center">Review</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Approval</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Contacted</TableHead>
-                  <TableHead className="whitespace-nowrap text-center">Next Action</TableHead>
                   <TableHead className="whitespace-nowrap">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         Caricamento contatti...
@@ -506,7 +481,7 @@ export default function OperatorePage() {
                 )}
                 {!loading && !contacts.length && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                       Nessun contatto trovato.
                     </TableCell>
                   </TableRow>
@@ -584,11 +559,6 @@ export default function OperatorePage() {
                         >
                           {contact.contacted ? <Check className="h-5 w-5 text-emerald-600" /> : <X className="h-5 w-5 text-red-400" />}
                         </button>
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
-                        <Badge variant="outline" className={nextActionBadgeClass(contact.next_action)}>
-                          {formatNextAction(contact.next_action)}
-                        </Badge>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
