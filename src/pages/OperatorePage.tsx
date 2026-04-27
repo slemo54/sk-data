@@ -208,6 +208,7 @@ export default function OperatorePage() {
         next_action: 'pronto_da_contattare',
         status: 'reviewed',
       });
+      toast.success('Segnalato come Pronto a contattare');
       await refreshContacts();
       await refreshKpi();
     } catch (err) {

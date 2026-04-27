@@ -266,17 +266,15 @@ export default function SKContactDrawer({ contact, sources, open, onOpenChange, 
           </div>
 
           {/* Note operatore */}
-          {contact.notes && (
-            <div className="space-y-2">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Note operatore
-              </h3>
-              <div className="rounded-xl border bg-amber-50 p-4 text-sm text-amber-900">
-                {contact.notes}
-              </div>
+          <div className="space-y-2">
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Note operatore
+            </h3>
+            <div className={`rounded-xl border p-4 text-sm ${contact.notes ? 'bg-amber-50 text-amber-900' : 'bg-muted/30 text-muted-foreground italic'}`}>
+              {contact.notes ?? 'Nessuna nota'}
             </div>
-          )}
+          </div>
 
           {/* Source */}
           <div className="space-y-2">

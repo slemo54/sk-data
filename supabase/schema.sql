@@ -167,7 +167,7 @@ begin
   update public.contacts c
   set assigned_to = claim_user,
       claimed_at = now(),
-      status = case when c.status = 'todo' then 'in_progress' else c.status end,
+      status = c.status,
       updated_at = now()
   from picked
   where c.id = picked.id

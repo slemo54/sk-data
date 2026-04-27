@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 import {
   fetchContacts,
   fetchContactSources,
@@ -200,6 +201,7 @@ export default function DashboardSK() {
             ? { approval: !contact.approval }
             : { contacted: !contact.contacted };
       await updateContact(contact.id, patch);
+      toast.success(field === 'review_status' ? 'Review aggiornata' : field === 'approval' ? 'Approval aggiornata' : 'Contattato aggiornato');
       await refreshContacts();
       await refreshKpi();
     } catch (err) {
@@ -223,6 +225,7 @@ export default function DashboardSK() {
     if (!selectedContact) return;
     try {
       await updateContact(selectedContact.id, { next_action: nextAction });
+      toast.success('Next Action aggiornata');
       await refreshContacts();
       await refreshKpi();
     } catch (err) {
@@ -446,7 +449,14 @@ export default function DashboardSK() {
                   >
                     <TableCell>
                       <div className="flex flex-col gap-1 py-1">
-                        <span className="font-semibold text-sm">{contact.full_name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">{contact.full_name}</span>
+                          {contact.notes && (
+                            <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">
+                              Note
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           {contact.instagram_url && (
                             <span className="flex items-center gap-1"><Instagram className="h-3 w-3 text-pink-600" />@{new URL(contact.instagram_url).pathname.replace(/^\//, '').split('/')[0]}</span>
