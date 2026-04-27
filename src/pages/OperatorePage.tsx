@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
+import OperatorContactDrawer from '@/components/OperatorContactDrawer';
 import {
-  addNote,
+  // addNote,
   claimContacts,
   fetchContacts,
   fetchContactSources,
@@ -24,8 +26,8 @@ import type {
 } from '@/types/contact';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -33,8 +35,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import {
   Table,
@@ -44,28 +44,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { toast } from 'sonner';
 import {
   Check,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  EyeOff,
   Instagram,
   Linkedin,
+  // Lock,
   LogOut,
-  MailOpen,
   MessageSquare,
-  NotebookPen,
+  // NotebookPen,
   RefreshCw,
   Search,
-  Users,
   X,
 } from 'lucide-react';
-
-type EditableField = keyof ContactPatch;
 
 const PAGE_SIZE = 50;
 
@@ -85,31 +79,10 @@ const NEXT_ACTION_OPTIONS: { value: NextAction; label: string }[] = [
   { value: 'chiuso', label: 'Chiuso' },
 ];
 
-function normalizeNullable(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed.length ? trimmed : null;
-}
-
 function getNextStatus(current: ReviewStatus): ReviewStatus {
   if (current === 'todo') return 'in_progress';
   if (current === 'in_progress') return 'reviewed';
   return 'reviewed';
-}
-
-function getSocialHandle(url: string | null): string | null {
-  if (!url) return null;
-  try {
-    const path = new URL(url).pathname.replace(/^\//, '');
-    return path.split('/')[0] || null;
-  } catch {
-    return url;
-  }
-}
-
-function getPrimaryDmUrl(contact: Contact): string | null {
-  if (contact.instagram_url) return contact.instagram_url;
-  if (contact.linkedin_url) return contact.linkedin_url;
-  return null;
 }
 
 function nextActionBadgeClass(action: NextAction | null): string {
@@ -161,12 +134,8 @@ export default function OperatorePage() {
   const [claimCount, setClaimCount] = useState(25);
   const [selectedContactId, setSelectedContactId] = useState<string>('');
   const [selectedSources, setSelectedSources] = useState<ContactSource[]>([]);
-  const [detailDraft, setDetailDraft] = useState<ContactPatch>({});
-  const [saving, setSaving] = useState(false);
-  const [lastRefreshed, setLastRefreshed] = useState('');
-  const [noteDraft, setNoteDraft] = useState('');
-  const [noteOpenId, setNoteOpenId] = useState<string>('');
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState('');
 
   const userEmail = user?.email ?? '';
 
@@ -218,32 +187,12 @@ export default function OperatorePage() {
   useEffect(() => {
     if (!selectedContactId) {
       setSelectedSources([]);
-      setDetailDraft({});
       return;
     }
     void fetchContactSources(selectedContactId)
       .then((sources) => setSelectedSources(sources))
       .catch((err) => setError((err as Error).message || 'Unable to load source details'));
   }, [selectedContactId]);
-
-  useEffect(() => {
-    if (!selectedContact) {
-      setDetailDraft({});
-      setNoteDraft('');
-      return;
-    }
-    setDetailDraft({
-      email: selectedContact.email,
-      instagram_url: selectedContact.instagram_url,
-      linkedin_url: selectedContact.linkedin_url,
-      employer: selectedContact.employer,
-      title: selectedContact.title,
-      occupation: selectedContact.occupation,
-      next_action: selectedContact.next_action,
-      notes: selectedContact.notes,
-    });
-    setNoteDraft(selectedContact.notes ?? '');
-  }, [selectedContact]);
 
   const countries = useMemo(
     () => [...new Set(contacts.map((contact) => contact.country).filter(Boolean))].sort(),
@@ -294,28 +243,14 @@ export default function OperatorePage() {
     }
   };
 
-  const handleSaveDetail = async () => {
+  const handleSave = async (patch: ContactPatch) => {
     if (!selectedContact) return;
-    setSaving(true);
-    setError('');
     try {
-      const patch: ContactPatch = {
-        email: normalizeNullable(detailDraft.email ?? ''),
-        instagram_url: normalizeNullable(detailDraft.instagram_url ?? ''),
-        linkedin_url: normalizeNullable(detailDraft.linkedin_url ?? ''),
-        employer: normalizeNullable(detailDraft.employer ?? ''),
-        title: normalizeNullable(detailDraft.title ?? ''),
-        occupation: normalizeNullable(detailDraft.occupation ?? ''),
-        next_action: detailDraft.next_action ?? null,
-        notes: normalizeNullable(detailDraft.notes ?? ''),
-      };
       await updateContact(selectedContact.id, patch);
       await refreshContacts();
       await refreshKpi();
     } catch (err) {
       setError((err as Error).message || 'Save failed');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -337,20 +272,6 @@ export default function OperatorePage() {
     } catch (err) {
       setError((err as Error).message || 'Contacted toggle failed');
     }
-  };
-
-  const handleSaveNote = async (contactId: string) => {
-    try {
-      await addNote(contactId, noteDraft);
-      setNoteOpenId('');
-      await refreshContacts();
-    } catch (err) {
-      setError((err as Error).message || 'Note save failed');
-    }
-  };
-
-  const setDraftValue = (field: EditableField, value: string) => {
-    setDetailDraft((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSignOut = async () => {
@@ -383,7 +304,6 @@ export default function OperatorePage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="border-b bg-card px-6 py-4">
         <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
@@ -410,11 +330,11 @@ export default function OperatorePage() {
       </header>
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full p-6 space-y-6">
-        {/* KPI Cards */}
+        {/* KPI */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
             <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-              <Users className="h-5 w-5" />
+              <RefreshCw className="h-5 w-5" />
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Profiles</span>
@@ -423,7 +343,7 @@ export default function OperatorePage() {
           </div>
           <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
             <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-              <EyeOff className="h-5 w-5" />
+              <Search className="h-5 w-5" />
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pending Review</span>
@@ -432,7 +352,7 @@ export default function OperatorePage() {
           </div>
           <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
             <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
-              <MailOpen className="h-5 w-5" />
+              <MessageSquare className="h-5 w-5" />
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ready to Contact</span>
@@ -441,7 +361,7 @@ export default function OperatorePage() {
           </div>
           <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
             <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
-              <CheckCircle2 className="h-5 w-5" />
+              <Check className="h-5 w-5" />
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contacted</span>
@@ -505,7 +425,7 @@ export default function OperatorePage() {
             </Select>
           </div>
 
-          <div className="p-4 flex flex-wrap items-center justify-between gap-4 bg-muted/30">
+          <div className="p-4 flex flex-wrap items-center justify-between gap-3 bg-muted/30">
             <div className="flex flex-wrap gap-5 items-center">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox checked={Boolean(filters.hasInstagram)} onCheckedChange={(v) => handleFilterChange({ hasInstagram: Boolean(v) })} />
@@ -563,8 +483,9 @@ export default function OperatorePage() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-muted/50">
-                  <TableHead onClick={() => handleSort('full_name')} className="cursor-pointer whitespace-nowrap w-[240px]">Social Accounts</TableHead>
-                  <TableHead className="whitespace-nowrap w-[220px]">Restaurant / Location</TableHead>
+                  <TableHead className="whitespace-nowrap w-[40px]"></TableHead>
+                  <TableHead onClick={() => handleSort('full_name')} className="cursor-pointer whitespace-nowrap w-[200px]">Social Accounts</TableHead>
+                  <TableHead className="whitespace-nowrap w-[180px]">Restaurant / Location</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Review</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Approval</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Contacted</TableHead>
@@ -575,7 +496,7 @@ export default function OperatorePage() {
               <TableBody>
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         Caricamento contatti...
@@ -585,117 +506,107 @@ export default function OperatorePage() {
                 )}
                 {!loading && !contacts.length && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       Nessun contatto trovato.
                     </TableCell>
                   </TableRow>
                 )}
-                {!loading && contacts.map((contact) => (
-                  <TableRow
-                    key={contact.id}
-                    className={`cursor-pointer transition-colors ${contact.id === selectedContactId ? 'bg-muted/60' : 'hover:bg-muted/40'}`}
-                    onClick={() => { setSelectedContactId(contact.id); setSheetOpen(true); }}
-                  >
-                    <TableCell>
-                      <div className="flex flex-col gap-1 py-1">
-                        <span className="font-semibold text-sm">{contact.full_name}</span>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          {contact.instagram_url && (
-                            <span className="flex items-center gap-1"><Instagram className="h-3 w-3 text-pink-600" />@{getSocialHandle(contact.instagram_url)}</span>
-                          )}
-                          {contact.linkedin_url && (
-                            <span className="flex items-center gap-1"><Linkedin className="h-3 w-3 text-blue-700" />{getSocialHandle(contact.linkedin_url)}</span>
-                          )}
-                          {!contact.instagram_url && !contact.linkedin_url && <span className="italic">Nessun social</span>}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1 py-1">
-                        <span className="text-sm font-medium">{contact.employer ?? '-'}</span>
-                        <span className="text-xs text-muted-foreground">{[contact.city, contact.country].filter(Boolean).join(', ') || '-'}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
-                      <button
-                        onClick={() => {
-                          void updateContact(contact.id, { review_status: contact.review_status === 'seen' ? 'unseen' : 'seen' }).then(() => { void refreshContacts(); void refreshKpi(); });
-                        }}
-                        className="focus:outline-none"
-                      >
-                        <Badge
-                          variant="outline"
-                          className={contact.review_status === 'seen'
-                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 cursor-pointer'
-                            : 'bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-100 cursor-pointer'}
-                        >
-                          {contact.review_status === 'seen' ? 'Seen' : 'Unseen'}
-                        </Badge>
-                      </button>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
-                      <Switch
-                        checked={contact.approval}
-                        onCheckedChange={() => void handleToggleApproval(contact)}
-                        aria-label="Toggle approval"
-                      />
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
-                      <button onClick={() => void handleToggleContacted(contact)} className="focus:outline-none inline-flex items-center justify-center h-8 w-8 rounded-full hover:bg-muted transition-colors">
-                        {contact.contacted ? (
-                          <Check className="h-5 w-5 text-emerald-600" />
+                {!loading && contacts.map((contact) => {
+                  const isMine = contact.assigned_to === userEmail;
+                  const isLocked = !isMine;
+                  return (
+                    <TableRow
+                      key={contact.id}
+                      className={`transition-colors ${contact.id === selectedContactId ? 'bg-muted/60' : 'hover:bg-muted/40'} ${isLocked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                      onClick={() => { setSelectedContactId(contact.id); setSheetOpen(true); }}
+                    >
+                      <TableCell className="py-2">
+                        {isMine ? (
+                          <div className="h-2 w-2 rounded-full bg-emerald-500 mx-auto" title="Assegnato a te" />
+                        ) : contact.assigned_to ? (
+                          <div className="h-2 w-2 rounded-full bg-gray-400 mx-auto" title={`Assegnato a ${contact.assigned_to}`} />
                         ) : (
-                          <X className="h-5 w-5 text-red-400" />
+                          <div className="h-2 w-2 rounded-full bg-amber-400 mx-auto" title="Non assegnato" />
                         )}
-                      </button>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
-                      <Badge variant="outline" className={nextActionBadgeClass(contact.next_action)}>
-                        {formatNextAction(contact.next_action)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-1">
-                        <Popover
-                          open={noteOpenId === contact.id}
-                          onOpenChange={(open) => { setNoteOpenId(open ? contact.id : ''); if (open) setNoteDraft(contact.notes ?? ''); }}
-                        >
-                          <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <NotebookPen className="h-4 w-4" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-80" align="end">
-                            <div className="flex flex-col gap-2">
-                              <label className="text-sm font-medium">Nota</label>
-                              <textarea
-                                className="min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                                value={noteDraft}
-                                onChange={(e) => setNoteDraft(e.target.value)}
-                              />
-                              <div className="flex justify-end gap-2">
-                                <Button size="sm" variant="ghost" onClick={() => setNoteOpenId('')}>Annulla</Button>
-                                <Button size="sm" onClick={() => void handleSaveNote(contact.id)}>Salva</Button>
-                              </div>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          disabled={!getPrimaryDmUrl(contact)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 py-1">
+                          <span className="font-semibold text-sm">{contact.full_name}</span>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            {contact.instagram_url && (
+                              <span className="flex items-center gap-1"><Instagram className="h-3 w-3 text-pink-600" />@{new URL(contact.instagram_url).pathname.replace(/^\//, '').split('/')[0]}</span>
+                            )}
+                            {contact.linkedin_url && (
+                              <span className="flex items-center gap-1"><Linkedin className="h-3 w-3 text-blue-700" />{new URL(contact.linkedin_url).pathname.replace(/^\//, '').split('/')[0]}</span>
+                            )}
+                            {!contact.instagram_url && !contact.linkedin_url && <span className="italic">Nessun social</span>}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 py-1">
+                          <span className="text-sm font-medium">{contact.employer ?? '-'}</span>
+                          <span className="text-xs text-muted-foreground">{[contact.city, contact.country].filter(Boolean).join(', ') || '-'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
+                        <button
                           onClick={() => {
-                            const url = getPrimaryDmUrl(contact);
-                            if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                            if (isLocked) return;
+                            void updateContact(contact.id, { review_status: contact.review_status === 'seen' ? 'unseen' : 'seen' }).then(() => { void refreshContacts(); void refreshKpi(); });
                           }}
+                          className="focus:outline-none disabled:opacity-50"
+                          disabled={isLocked}
                         >
-                          <MessageSquare className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          <Badge
+                            variant="outline"
+                            className={contact.review_status === 'seen'
+                              ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 cursor-pointer'
+                              : 'bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-100 cursor-pointer'}
+                          >
+                            {contact.review_status === 'seen' ? 'Seen' : 'Unseen'}
+                          </Badge>
+                        </button>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
+                        <Switch
+                          checked={contact.approval}
+                          onCheckedChange={() => { if (!isLocked) void handleToggleApproval(contact); }}
+                          aria-label="Toggle approval"
+                          disabled={isLocked}
+                        />
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
+                        <button
+                          onClick={() => { if (!isLocked) void handleToggleContacted(contact); }}
+                          className="focus:outline-none inline-flex items-center justify-center h-8 w-8 rounded-full hover:bg-muted transition-colors disabled:opacity-50"
+                          disabled={isLocked}
+                        >
+                          {contact.contacted ? <Check className="h-5 w-5 text-emerald-600" /> : <X className="h-5 w-5 text-red-400" />}
+                        </button>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
+                        <Badge variant="outline" className={nextActionBadgeClass(contact.next_action)}>
+                          {formatNextAction(contact.next_action)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isLocked} onClick={() => {
+                            if (contact.instagram_url) window.open(contact.instagram_url, '_blank', 'noopener,noreferrer');
+                          }}>
+                            <Instagram className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isLocked} onClick={() => {
+                            if (contact.linkedin_url) window.open(contact.linkedin_url, '_blank', 'noopener,noreferrer');
+                          }}>
+                            <Linkedin className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -703,56 +614,18 @@ export default function OperatorePage() {
         </div>
       </main>
 
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader><SheetTitle>Dettaglio Persona</SheetTitle></SheetHeader>
-          {selectedContact && (
-            <div className="mt-6 flex flex-col gap-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Email</span><Input value={detailDraft.email ?? ''} onChange={(e) => setDraftValue('email', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Instagram</span><Input value={detailDraft.instagram_url ?? ''} onChange={(e) => setDraftValue('instagram_url', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">LinkedIn</span><Input value={detailDraft.linkedin_url ?? ''} onChange={(e) => setDraftValue('linkedin_url', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Employer</span><Input value={detailDraft.employer ?? ''} onChange={(e) => setDraftValue('employer', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Title</span><Input value={detailDraft.title ?? ''} onChange={(e) => setDraftValue('title', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Occupation</span><Input value={detailDraft.occupation ?? ''} onChange={(e) => setDraftValue('occupation', e.target.value)} /></label>
-                <label className="flex flex-col gap-1 text-sm sm:col-span-2"><span className="font-medium">Next Action</span>
-                  <Select value={detailDraft.next_action ?? 'none'} onValueChange={(v) => setDetailDraft((prev) => ({ ...prev, next_action: v === 'none' ? null : (v as NextAction) }))}>
-                    <SelectTrigger><SelectValue placeholder="Seleziona azione" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">—</SelectItem>
-                      {NEXT_ACTION_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
-                <label className="flex flex-col gap-1 text-sm sm:col-span-2"><span className="font-medium">Note</span>
-                  <textarea className="min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" value={detailDraft.notes ?? ''} onChange={(e) => setDraftValue('notes', e.target.value)} />
-                </label>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button onClick={() => void handleSaveDetail()} disabled={saving}>{saving ? 'Salvataggio...' : 'Salva'}</Button>
-                <Button variant="outline" size="sm" onClick={() => void handleStatusAdvance(selectedContact.id, selectedContact.status)}>Avanza stato ({selectedContact.status})</Button>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold mb-2">Provenienze</h3>
-                {!selectedSources.length && <p className="text-sm text-muted-foreground">Nessuna provenance disponibile.</p>}
-                {!!selectedSources.length && (
-                  <ul className="flex flex-col gap-2">
-                    {selectedSources.map((source) => (
-                      <li key={source.id} className="text-sm border rounded-lg p-3 bg-muted/30">
-                        <div className="font-medium capitalize">{source.source.replace('_', ' ')}</div>
-                        <div className="text-muted-foreground">{source.restaurant_name ?? '-'} · {source.award ?? '-'} · {source.wine_role ?? '-'}</div>
-                        {source.profile_url && <a href={source.profile_url} target="_blank" rel="noreferrer" className="text-xs text-primary underline">Profilo</a>}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      <OperatorContactDrawer
+        contact={selectedContact}
+        sources={selectedSources}
+        userEmail={userEmail}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onSave={handleSave}
+        onStatusAdvance={() => {
+          if (selectedContact) void handleStatusAdvance(selectedContact.id, selectedContact.status);
+        }}
+        saving={false}
+      />
     </div>
   );
 }

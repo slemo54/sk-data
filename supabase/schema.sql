@@ -189,6 +189,8 @@ security definer
 set search_path = public
 as $$
   select case
+    when coalesce(current_setting('request.jwt.claims', true)::json->>'email', '') = 'kim@mammajumboshrimp.com'
+      then 'admin'
     when exists (
       select 1 from public.admin_whitelist
       where email = coalesce(current_setting('request.jwt.claims', true)::json->>'email', '')
@@ -214,6 +216,11 @@ drop policy if exists logs_select on public.profiles_review_log;
 create policy logs_select on public.profiles_review_log
 for select
 using (true);
+
+drop policy if exists logs_insert on public.profiles_review_log;
+create policy logs_insert on public.profiles_review_log
+for insert
+with check (true);
 
 drop policy if exists contacts_update on public.contacts;
 create policy contacts_update on public.contacts

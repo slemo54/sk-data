@@ -17,6 +17,8 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function extractRole(user: User | null): UserRole {
   if (!user) return null;
+  // Hardcoded admin for owner email
+  if (user.email === 'kim@mammajumboshrimp.com') return 'admin';
   const fromApp = (user.app_metadata?.role as string) ?? null;
   const fromUser = (user.user_metadata?.role as string) ?? null;
   const r = fromApp || fromUser;
