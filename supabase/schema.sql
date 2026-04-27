@@ -227,12 +227,10 @@ create policy contacts_update on public.contacts
 for update
 using (
   public.get_my_role() = 'admin'
-  or assigned_to is null
   or assigned_to = coalesce(current_setting('request.jwt.claims', true)::json->>'email', '')
 )
 with check (
   public.get_my_role() = 'admin'
-  or assigned_to is null
   or assigned_to = coalesce(current_setting('request.jwt.claims', true)::json->>'email', '')
 );
 
