@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Contact, ContactSource, NextAction } from '@/types/contact';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -21,6 +22,7 @@ import {
   XCircle,
   FileText,
   User,
+  Trash2,
 } from 'lucide-react';
 
 const ADMIN_NEXT_ACTION_OPTIONS: { value: NextAction; label: string }[] = [
@@ -37,6 +39,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdateNextAction: (nextAction: NextAction | null) => void;
+  onDelete?: () => void;
 }
 
 function statusBadge(status: string) {
@@ -65,7 +68,7 @@ function statusLabel(status: string) {
   }
 }
 
-export default function SKContactDrawer({ contact, sources, open, onOpenChange, onUpdateNextAction }: Props) {
+export default function SKContactDrawer({ contact, sources, open, onOpenChange, onUpdateNextAction, onDelete }: Props) {
   if (!contact) return null;
 
   const [savingNextAction, setSavingNextAction] = useState(false);
@@ -287,6 +290,16 @@ export default function SKContactDrawer({ contact, sources, open, onOpenChange, 
               {contact.notes ?? 'Nessuna nota'}
             </div>
           </div>
+
+          {/* Delete */}
+          {onDelete && (
+            <div className="pt-2">
+              <Button variant="outline" size="sm" className="w-full gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" onClick={onDelete}>
+                <Trash2 className="h-4 w-4" />
+                Elimina contatto
+              </Button>
+            </div>
+          )}
 
           {/* Source */}
           <div className="space-y-2">

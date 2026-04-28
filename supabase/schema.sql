@@ -344,3 +344,12 @@ update public.contacts
 set first_name = trim(split_part(full_name, ' ', 1)),
     last_name = trim(substr(full_name, length(split_part(full_name, ' ', 1)) + 2))
 where first_name is null and full_name is not null;
+
+-- Delete policy: admin or assigned operator only
+drop policy if exists contacts_delete on public.contacts;
+create policy contacts_delete on public.contacts
+for delete
+using (
+  public.get_my_role() = 'admin'
+  or assigned_to = coalesce(current_setting('request.jwt.claims', true)::json->>'email', '')
+);

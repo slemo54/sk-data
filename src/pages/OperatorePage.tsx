@@ -9,6 +9,7 @@ import {
   claimContacts,
   claimSingleContact,
   createContact,
+  deleteContact,
   fetchContacts,
   fetchContactSources,
   fetchDashboardKpi,
@@ -55,10 +56,12 @@ import {
   Linkedin,
   // Lock,
   LogOut,
+  Mail,
   MessageSquare,
   // NotebookPen,
   Plus,
   RefreshCw,
+  Trash2,
   Search,
   X,
 } from 'lucide-react';
@@ -110,6 +113,8 @@ export default function OperatorePage() {
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const userEmail = user?.email ?? '';
 
@@ -280,6 +285,70 @@ export default function OperatorePage() {
       setError((err as Error).message || 'Contacted toggle failed');
     }
   };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteContact(id);
+      toast.success('Contatto eliminato');
+      setSheetOpen(false);
+      setSelectedContactId('');
+      await refreshContacts();
+      await refreshKpi();
+    } catch (err) {
+      toast.error((err as Error).message || 'Eliminazione fallita');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.size) return;
+    setBulkSaving(true);
+    try {
+      await Promise.all(Array.from(selectedIds).map((id) => deleteContact(id)));
+      toast.success(`${selectedIds.size} contatti eliminati`);
+      setSelectedIds(new Set());
+      await refreshContacts();
+      await refreshKpi();
+    } catch (err) {
+      toast.error((err as Error).message || 'Bulk delete fallito');
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+  const handleToggleSelectAll = () => {
+    const visibleIds = contacts.map((c) => c.id);
+    const allSelected = visibleIds.every((id) => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        visibleIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        visibleIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const socialCounts = useMemo(() => {
+    return {
+      instagram: contacts.filter((c) => c.instagram_url).length,
+      linkedin: contacts.filter((c) => c.linkedin_url).length,
+      email: contacts.filter((c) => c.email).length,
+    };
+  }, [contacts]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -527,12 +596,38 @@ export default function OperatorePage() {
           </div>
         )}
 
+        {selectedIds.size > 0 && (
+          <div className="flex items-center justify-between rounded-xl border bg-card px-4 py-3 shadow-sm">
+            <span className="text-sm font-medium">
+              {selectedIds.size} selezionato{selectedIds.size > 1 ? 'i' : ''}
+            </span>
+            <Button variant="outline" size="sm" onClick={handleBulkDelete} disabled={bulkSaving} className="gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700">
+              <Trash2 className="h-4 w-4" />
+              Elimina {selectedIds.size}
+            </Button>
+          </div>
+        )}
+
+        {/* Social counters */}
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1"><Instagram className="h-4 w-4 text-pink-600" /> {socialCounts.instagram}</span>
+          <span className="flex items-center gap-1"><Linkedin className="h-4 w-4 text-blue-700" /> {socialCounts.linkedin}</span>
+          <span className="flex items-center gap-1"><Mail className="h-4 w-4 text-emerald-600" /> {socialCounts.email}</span>
+        </div>
+
         {/* Table */}
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-muted/50">
+                  <TableHead className="w-[40px] text-center">
+                    <Checkbox
+                      checked={contacts.length > 0 && contacts.every((c) => selectedIds.has(c.id))}
+                      onCheckedChange={handleToggleSelectAll}
+                      aria-label="Seleziona tutti"
+                    />
+                  </TableHead>
                   <TableHead className="whitespace-nowrap w-[40px]"></TableHead>
                   <TableHead onClick={() => handleSort('full_name')} className="cursor-pointer whitespace-nowrap w-[200px]">Social Accounts</TableHead>
                   <TableHead className="whitespace-nowrap w-[180px]">Restaurant / Location</TableHead>
@@ -546,7 +641,7 @@ export default function OperatorePage() {
               <TableBody>
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         Caricamento contatti...
@@ -556,7 +651,7 @@ export default function OperatorePage() {
                 )}
                 {!loading && !contacts.length && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       Nessun contatto trovato.
                     </TableCell>
                   </TableRow>
@@ -575,6 +670,13 @@ export default function OperatorePage() {
                       className={`transition-colors ${rowBg} ${contact.id === selectedContactId ? 'bg-muted/60' : 'hover:bg-muted/40'} ${isLocked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
                       onClick={() => { setSelectedContactId(contact.id); setSheetOpen(true); }}
                     >
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(contact.id)}
+                          onCheckedChange={() => handleToggleSelect(contact.id)}
+                          aria-label="Seleziona riga"
+                        />
+                      </TableCell>
                       <TableCell className="py-2 text-center">
                         {isMine ? (
                           <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]" title="Assegnato a te">
@@ -691,6 +793,9 @@ export default function OperatorePage() {
         }}
         onClaimSingle={() => {
           if (selectedContact) void handleClaimSingle();
+        }}
+        onDelete={() => {
+          if (selectedContact) void handleDelete(selectedContact.id);
         }}
         saving={false}
       />

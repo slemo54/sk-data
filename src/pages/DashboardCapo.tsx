@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import {
+  deleteContact,
   fetchContacts,
   fetchContactSources,
   fetchDashboardKpi,
@@ -61,6 +62,7 @@ import {
   MailOpen,
   RefreshCw,
   Search,
+  Trash2,
   Users,
   X,
 } from 'lucide-react';
@@ -306,6 +308,43 @@ export default function DashboardSK() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteContact(id);
+      toast.success('Contatto eliminato');
+      setSheetOpen(false);
+      setSelectedContactId('');
+      await refreshContacts();
+      await refreshKpi();
+    } catch (err) {
+      toast.error((err as Error).message || 'Eliminazione fallita');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.size) return;
+    setBulkSaving(true);
+    try {
+      await Promise.all(Array.from(selectedIds).map((id) => deleteContact(id)));
+      toast.success(`${selectedIds.size} contatti eliminati`);
+      setSelectedIds(new Set());
+      await refreshContacts();
+      await refreshKpi();
+    } catch (err) {
+      toast.error((err as Error).message || 'Bulk delete fallito');
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+  const socialCounts = useMemo(() => {
+    return {
+      instagram: contacts.filter((c) => c.instagram_url).length,
+      linkedin: contacts.filter((c) => c.linkedin_url).length,
+      email: contacts.filter((c) => c.email).length,
+    };
+  }, [contacts]);
+
   const renderPagination = () => {
     if (totalPages <= 1) return null;
     return (
@@ -500,12 +539,25 @@ export default function DashboardSK() {
             <span className="text-sm font-medium">
               {selectedIds.size} selezionato{selectedIds.size > 1 ? 'i' : ''}
             </span>
-            <Button size="sm" onClick={handleBulkApprove} disabled={bulkSaving} className="gap-2">
-              <CheckCircle2 className="h-4 w-4" />
-              {bulkSaving ? 'Approvo...' : `Approva ${selectedIds.size}`}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={handleBulkApprove} disabled={bulkSaving} className="gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                {bulkSaving ? 'Approvo...' : `Approva ${selectedIds.size}`}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleBulkDelete} disabled={bulkSaving} className="gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700">
+                <Trash2 className="h-4 w-4" />
+                Elimina {selectedIds.size}
+              </Button>
+            </div>
           </div>
         )}
+
+        {/* Social counters */}
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1"><Instagram className="h-4 w-4 text-pink-600" /> {socialCounts.instagram}</span>
+          <span className="flex items-center gap-1"><Linkedin className="h-4 w-4 text-blue-700" /> {socialCounts.linkedin}</span>
+          <span className="flex items-center gap-1"><Mail className="h-4 w-4 text-emerald-600" /> {socialCounts.email}</span>
+        </div>
 
         {/* Table */}
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
@@ -683,6 +735,9 @@ export default function DashboardSK() {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         onUpdateNextAction={handleUpdateNextAction}
+        onDelete={() => {
+          if (selectedContact) void handleDelete(selectedContact.id);
+        }}
       />
     </div>
   );

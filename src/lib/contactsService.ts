@@ -218,6 +218,12 @@ export async function updateContact(contactId: string, patch: ContactPatch): Pro
   return rows[0];
 }
 
+export async function deleteContact(contactId: string): Promise<void> {
+  await sbFetch(`/rest/v1/contacts?id=eq.${contactId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function createContact(data: ContactCreate): Promise<Contact> {
   const rows = await sbFetch<Contact[]>('/rest/v1/contacts', {
     method: 'POST',

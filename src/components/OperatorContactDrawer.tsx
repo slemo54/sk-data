@@ -3,7 +3,7 @@ import type { Contact, ContactSource, ContactPatch } from '@/types/contact';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Lock, ExternalLink, MapPin, User, Building2, Briefcase, FileText } from 'lucide-react';
+import { Lock, ExternalLink, MapPin, User, Building2, Briefcase, FileText, Trash2 } from 'lucide-react';
 
 interface Props {
   contact: Contact | null;
@@ -14,6 +14,7 @@ interface Props {
   onSave: (patch: ContactPatch) => void;
   onReadyToContact: () => void;
   onClaimSingle: () => void;
+  onDelete?: () => void;
   saving: boolean;
 }
 
@@ -26,6 +27,7 @@ export default function OperatorContactDrawer({
   onSave,
   onReadyToContact,
   onClaimSingle,
+  onDelete,
   saving,
 }: Props) {
   const [draft, setDraft] = useState<ContactPatch>({});
@@ -200,6 +202,16 @@ export default function OperatorContactDrawer({
               Pronto a contattare
             </Button>
           </div>
+
+          {/* Delete */}
+          {onDelete && isMine && (
+            <div className="pt-1">
+              <Button variant="outline" size="sm" className="w-full gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" onClick={onDelete}>
+                <Trash2 className="h-4 w-4" />
+                Elimina contatto
+              </Button>
+            </div>
+          )}
 
           {/* Source */}
           <div className="space-y-2">
