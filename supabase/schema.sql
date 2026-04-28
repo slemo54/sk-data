@@ -336,6 +336,11 @@ before insert or update on public.contacts
 for each row
 execute function public.set_normalized_name();
 
+-- Ensure first_name / last_name exist for existing tables
+alter table public.contacts
+  add column if not exists first_name text,
+  add column if not exists last_name text;
+
 -- Migration: split existing full_name into first_name / last_name
 update public.contacts
 set first_name = trim(split_part(full_name, ' ', 1)),
