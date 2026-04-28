@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 import Login from '@/pages/Login';
+import ResetPassword from '@/pages/ResetPassword';
 import DashboardSK from '@/pages/DashboardCapo';
 import OperatorePage from '@/pages/OperatorePage';
 
@@ -54,6 +55,7 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

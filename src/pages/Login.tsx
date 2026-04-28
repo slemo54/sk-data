@@ -136,6 +136,33 @@ export default function Login() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Attendere...' : mode === 'login' ? 'Accedi' : 'Registrati'}
           </Button>
+
+          {mode === 'login' && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) {
+                  setError('Inserisci la tua email per ricevere il link di reset.');
+                  return;
+                }
+                setLoading(true);
+                try {
+                  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/reset-password`,
+                  });
+                  if (error) throw error;
+                  setError('Controlla la tua email per il link di reset password.');
+                } catch (err) {
+                  setError((err as Error).message || 'Errore durante l\'invio dell\'email.');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="text-xs text-muted-foreground hover:text-primary hover:underline w-full"
+            >
+              Password dimenticata?
+            </button>
+          )}
         </form>
 
         <div className="text-center">

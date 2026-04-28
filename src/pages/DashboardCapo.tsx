@@ -132,6 +132,22 @@ export default function DashboardSK() {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
 
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filters.source !== 'all' ||
+      filters.status !== 'all' ||
+      filters.reviewStatus !== 'all' ||
+      filters.nextAction !== 'all' ||
+      filters.country !== undefined ||
+      filters.query !== undefined ||
+      Boolean(filters.hasInstagram) ||
+      Boolean(filters.hasLinkedin) ||
+      Boolean(filters.hasEmail) ||
+      Boolean(filters.approved) ||
+      Boolean(filters.contacted)
+    );
+  }, [filters]);
+
   const refreshKpi = useCallback(async () => {
     try {
       const next = await fetchDashboardKpi();
@@ -398,24 +414,6 @@ export default function DashboardSK() {
       <main className="flex-1 max-w-[1440px] mx-auto w-full p-6 space-y-6">
         {/* KPI */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
-            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-              <Users className="h-5 w-5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Profiles</span>
-              <span className="text-2xl font-bold">{kpi.total.toLocaleString()}</span>
-            </div>
-          </div>
-          <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
-            <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-              <EyeOff className="h-5 w-5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pending Review</span>
-              <span className="text-2xl font-bold">{kpi.pendingReview.toLocaleString()}</span>
-            </div>
-          </div>
           <div
             className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-muted/50 transition-colors"
             onClick={() => handleFilterChange({ nextAction: 'pronto_da_contattare' })}
@@ -430,9 +428,33 @@ export default function DashboardSK() {
           </div>
           <div
             className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => handleResetFilters()}
+          >
+            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+              <Users className="h-5 w-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Profiles</span>
+              <span className="text-2xl font-bold">{kpi.total.toLocaleString()}</span>
+            </div>
+          </div>
+          <div
+            className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => handleFilterChange({ reviewStatus: 'unseen' })}
+          >
+            <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+              <EyeOff className="h-5 w-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pending Review</span>
+              <span className="text-2xl font-bold">{kpi.pendingReview.toLocaleString()}</span>
+            </div>
+          </div>
+          <div
+            className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-muted/50 transition-colors"
             onClick={() => handleFilterChange({ contacted: true })}
           >
-            <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+            <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
               <CheckCircle2 className="h-5 w-5" />
             </div>
             <div className="flex flex-col">
@@ -522,7 +544,12 @@ export default function DashboardSK() {
               <span className="text-muted-foreground">Contattati</span>
             </label>
             <div className="flex-1" />
-            <Button variant="ghost" size="sm" onClick={handleResetFilters} className="text-muted-foreground">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetFilters}
+              className={hasActiveFilters ? 'text-primary font-medium bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}
+            >
               Reset filtri
             </Button>
           </div>

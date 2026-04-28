@@ -62,6 +62,11 @@ function applyFilters(contacts: Contact[], filters: ContactsFilters): Contact[] 
       return false;
     }
 
+    // Escludi "pronto da contattare" senza social
+    if (filters.nextAction === 'pronto_da_contattare' && !contact.instagram_url && !contact.linkedin_url) {
+      return false;
+    }
+
     if (filters.approved === true && !contact.approval) {
       return false;
     }
@@ -285,7 +290,9 @@ export async function fetchContactSources(contactId: string): Promise<ContactSou
 
 export function computeDashboardKpi(contacts: Contact[]): DashboardKpi {
   const pendingReview = contacts.filter((c) => c.review_status === 'unseen').length;
-  const readyToContact = contacts.filter((c) => c.next_action === 'pronto_da_contattare').length;
+  const readyToContact = contacts.filter(
+    (c) => c.next_action === 'pronto_da_contattare' && (c.instagram_url || c.linkedin_url),
+  ).length;
   const contactedCount = contacts.filter((c) => c.contacted).length;
 
   return {
