@@ -323,9 +323,7 @@ declare
   effective_full_name text;
 begin
   effective_full_name := coalesce(NEW.full_name, trim(coalesce(NEW.first_name, '') || ' ' || coalesce(NEW.last_name, '')));
-  if NEW.normalized_name is null or NEW.normalized_name = '' or (TG_OP = 'UPDATE' and (OLD.full_name is distinct from NEW.full_name or OLD.first_name is distinct from NEW.first_name or OLD.last_name is distinct from NEW.last_name)) then
-    NEW.normalized_name := lower(trim(coalesce(effective_full_name, '')));
-  end if;
+  NEW.normalized_name := lower(trim(coalesce(effective_full_name, '')));
   return NEW;
 end;
 $$;
