@@ -12,11 +12,14 @@ import {
   deleteContact,
   fetchContacts,
   fetchContactSources,
+  fetchCountries,
   fetchDashboardKpi,
+  releaseContact,
   toggleApproval,
   toggleContacted,
   updateContact,
 } from '@/lib/contactsService';
+import { useDebounce } from '@/hooks/use-debounce';
 import type {
   Contact,
   ContactPatch,
@@ -46,6 +49,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Check,
   ChevronLeft,
@@ -54,11 +58,9 @@ import {
   ChevronsRight,
   Instagram,
   Linkedin,
-  // Lock,
   LogOut,
   Mail,
   MessageSquare,
-  // NotebookPen,
   Plus,
   RefreshCw,
   Trash2,
@@ -73,6 +75,7 @@ const DEFAULT_KPI: DashboardKpi = {
   pendingReview: 0,
   readyToContact: 0,
   contacted: 0,
+  approved: 0,
 };
 
 const NEXT_ACTION_OPTIONS: { value: NextAction; label: string }[] = [
@@ -115,6 +118,10 @@ export default function OperatorePage() {
   const [lastRefreshed, setLastRefreshed] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [allCountries, setAllCountries] = useState<string[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedQuery = useDebounce(searchInput, 300);
+  const [activeTab, setActiveTab] = useState<string>('all');
 
   const userEmail = user?.email ?? '';
 
@@ -135,28 +142,43 @@ export default function OperatorePage() {
     }
   }, []);
 
-  const refreshContacts = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await fetchContacts(filters, { page, pageSize: PAGE_SIZE }, sort);
-      setContacts(response.rows);
-      setTotal(response.total);
-      if (!selectedContactId && response.rows.length) {
-        setSelectedContactId(response.rows[0].id);
+  const refreshContacts = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await fetchContacts(
+          filters,
+          { page, pageSize: PAGE_SIZE },
+          sort,
+          signal,
+        );
+        if (signal?.aborted) return;
+        setContacts(response.rows);
+        setTotal(response.total);
+        if (!selectedContactId && response.rows.length) {
+          setSelectedContactId(response.rows[0].id);
+        }
+        if (
+          selectedContactId &&
+          !response.rows.find((row) => row.id === selectedContactId)
+        ) {
+          setSelectedContactId(response.rows[0]?.id ?? '');
+        }
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return;
+        setError((err as Error).message || 'Unable to load contacts');
+      } finally {
+        setLoading(false);
       }
-      if (selectedContactId && !response.rows.find((row) => row.id === selectedContactId)) {
-        setSelectedContactId(response.rows[0]?.id ?? '');
-      }
-    } catch (err) {
-      setError((err as Error).message || 'Unable to load contacts');
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, page, selectedContactId, sort]);
+    },
+    [filters, page, selectedContactId, sort],
+  );
 
   useEffect(() => {
-    void refreshContacts();
+    const controller = new AbortController();
+    void refreshContacts(controller.signal);
+    return () => controller.abort();
   }, [refreshContacts]);
 
   useEffect(() => {
@@ -173,14 +195,50 @@ export default function OperatorePage() {
       .catch((err) => setError((err as Error).message || 'Unable to load source details'));
   }, [selectedContactId]);
 
-  const countries = useMemo(
-    () => [...new Set(contacts.map((contact) => contact.country).filter(Boolean))].sort(),
-    [contacts],
-  );
+  useEffect(() => {
+    void fetchCountries().then(setAllCountries).catch(() => { /* silent */ });
+  }, []);
+
+  useEffect(() => {
+    handleFilterChange({ query: debouncedQuery || undefined });
+  }, [debouncedQuery]);
 
   const handleFilterChange = (patch: Partial<ContactsFilters>) => {
     setPage(1);
     setFilters((prev) => ({ ...prev, ...patch }));
+    setSelectedIds(new Set());
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const base: ContactsFilters = {
+      source: 'all',
+      status: 'all',
+      reviewStatus: 'all',
+      nextAction: 'all',
+    };
+    switch (tab) {
+      case 'mine':
+        handleFilterChange({ ...base, assignedToMe: true, userId: userEmail });
+        break;
+      case 'unassigned':
+        handleFilterChange({ ...base, unassigned: true });
+        break;
+      case 'others':
+        handleFilterChange({ ...base, assignedToOthers: true, userId: userEmail });
+        break;
+      case 'ready':
+        handleFilterChange({
+          ...base,
+          nextAction: 'pronto_da_contattare',
+          hasInstagram: undefined,
+          hasLinkedin: undefined,
+        });
+        break;
+      default:
+        handleFilterChange(base);
+        break;
+    }
   };
 
   const handleSort = (field: ContactSort['field']) => {
@@ -299,6 +357,19 @@ export default function OperatorePage() {
     }
   };
 
+  const handleRelease = async () => {
+    if (!selectedContact) return;
+    try {
+      await releaseContact(selectedContact.id);
+      toast.success('Contatto rilasciato');
+      setSheetOpen(false);
+      await refreshContacts();
+      await refreshKpi();
+    } catch (err) {
+      toast.error((err as Error).message || 'Rilascio fallito');
+    }
+  };
+
   const handleBulkDelete = async () => {
     if (!selectedIds.size) return;
     setBulkSaving(true);
@@ -366,13 +437,16 @@ export default function OperatorePage() {
   }
 
   const handleResetFilters = () => {
+    setActiveTab('all');
     setFilters({
       source: 'all',
       status: 'all',
       reviewStatus: 'all',
       nextAction: 'all',
     });
+    setSearchInput('');
     setPage(1);
+    setSelectedIds(new Set());
   };
 
   const renderPagination = () => {
@@ -489,8 +563,8 @@ export default function OperatorePage() {
               <Search className="h-4 w-4 text-muted-foreground shrink-0" />
               <Input
                 placeholder="Cerca nome, email, social, employer..."
-                value={filters.query ?? ''}
-                onChange={(e) => handleFilterChange({ query: e.target.value })}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="h-9"
               />
             </div>
@@ -530,7 +604,7 @@ export default function OperatorePage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tutti i paesi</SelectItem>
-                {countries.map((c) => (
+                {allCountries.map((c) => (
                   <SelectItem key={c} value={c ?? ''}>{c}</SelectItem>
                 ))}
               </SelectContent>
@@ -559,18 +633,15 @@ export default function OperatorePage() {
                 <Checkbox checked={Boolean(filters.contacted)} onCheckedChange={(v) => handleFilterChange({ contacted: v ? true : undefined })} />
                 <span className="text-muted-foreground">Contattati</span>
               </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <Checkbox checked={Boolean(filters.assignedToMe)} onCheckedChange={(v) => handleFilterChange({ assignedToMe: Boolean(v), userId: userEmail })} />
-                <span className="text-muted-foreground">Assegnati a me</span>
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <Checkbox checked={Boolean(filters.unassigned)} onCheckedChange={(v) => handleFilterChange({ unassigned: Boolean(v) })} />
-                <span className="text-muted-foreground">Non assegnati</span>
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <Checkbox checked={Boolean(filters.assignedToOthers)} onCheckedChange={(v) => handleFilterChange({ assignedToOthers: Boolean(v), userId: userEmail })} />
-                <span className="text-muted-foreground">Assegnati ad altri</span>
-              </label>
+              <Tabs value={activeTab} onValueChange={handleTabChange} className="w-auto">
+                <TabsList className="h-8">
+                  <TabsTrigger value="all" className="text-xs px-3">Tutti</TabsTrigger>
+                  <TabsTrigger value="mine" className="text-xs px-3">Mine</TabsTrigger>
+                  <TabsTrigger value="unassigned" className="text-xs px-3">Da assegnare</TabsTrigger>
+                  <TabsTrigger value="others" className="text-xs px-3">Altri</TabsTrigger>
+                  <TabsTrigger value="ready" className="text-xs px-3">Ready</TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={handleResetFilters} className="text-muted-foreground">
@@ -794,6 +865,7 @@ export default function OperatorePage() {
         onClaimSingle={() => {
           if (selectedContact) void handleClaimSingle();
         }}
+        onRelease={handleRelease}
         onDelete={() => {
           if (selectedContact) void handleDelete(selectedContact.id);
         }}

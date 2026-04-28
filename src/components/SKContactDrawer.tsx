@@ -68,10 +68,17 @@ function statusLabel(status: string) {
   }
 }
 
-export default function SKContactDrawer({ contact, sources, open, onOpenChange, onUpdateNextAction, onDelete }: Props) {
-  if (!contact) return null;
-
+export default function SKContactDrawer({
+  contact,
+  sources,
+  open,
+  onOpenChange,
+  onUpdateNextAction,
+  onDelete,
+}: Props) {
   const [savingNextAction, setSavingNextAction] = useState(false);
+
+  if (!contact) return null;
 
   const handleNextActionChange = async (value: string) => {
     const nextAction = value === 'none' ? null : (value as NextAction);

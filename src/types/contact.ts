@@ -82,6 +82,10 @@ export type ContactSortField =
   | 'city'
   | 'employer'
   | 'status'
+  | 'next_action'
+  | 'review_status'
+  | 'approval'
+  | 'contacted'
   | 'assigned_to'
   | 'updated_at';
 
@@ -133,4 +137,5 @@ export interface DashboardKpi {
   pendingReview: number;
   readyToContact: number;
   contacted: number;
+  approved: number;
 }

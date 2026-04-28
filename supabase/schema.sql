@@ -34,7 +34,16 @@ alter table public.contacts
   add column if not exists next_action text,
   add column if not exists approval boolean default false,
   add column if not exists contacted boolean default false,
-  add column if not exists notes text;
+  add column if not exists notes text,
+  add constraint if not exists contacts_next_action_check
+    check (next_action is null or next_action in (
+      'pronto_da_contattare',
+      'da_approvare',
+      'follow_up',
+      'contattato',
+      'da_verificare',
+      'chiuso'
+    ));
 
 create table if not exists public.contact_sources (
   id uuid primary key default gen_random_uuid(),
@@ -243,17 +252,17 @@ $$;
 -- Policies
 drop policy if exists contacts_select on public.contacts;
 create policy contacts_select on public.contacts
-for select
+for select to authenticated
 using (true);
 
 drop policy if exists sources_select on public.contact_sources;
 create policy sources_select on public.contact_sources
-for select
+for select to authenticated
 using (true);
 
 drop policy if exists logs_select on public.profiles_review_log;
 create policy logs_select on public.profiles_review_log
-for select
+for select to authenticated
 using (true);
 
 drop policy if exists logs_insert on public.profiles_review_log;
@@ -307,10 +316,10 @@ begin
 end;
 $$;
 
-grant execute on function public.claim_contacts(integer, text) to anon, authenticated;
-grant execute on function public.claim_single_contact(uuid, text) to anon, authenticated;
-grant execute on function public.mark_social_ready() to anon, authenticated;
-grant execute on function public.get_my_role() to anon, authenticated;
+grant execute on function public.claim_contacts(integer, text) to authenticated;
+grant execute on function public.claim_single_contact(uuid, text) to authenticated;
+grant execute on function public.mark_social_ready() to authenticated;
+grant execute on function public.get_my_role() to authenticated;
 
 -- Auto-populate normalized_name from full_name on insert/update
 -- Fixes "null value in column normalized_name violates not-null constraint"

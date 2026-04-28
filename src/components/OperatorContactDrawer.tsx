@@ -14,6 +14,7 @@ interface Props {
   onSave: (patch: ContactPatch) => void;
   onReadyToContact: () => void;
   onClaimSingle: () => void;
+  onRelease?: () => void;
   onDelete?: () => void;
   saving: boolean;
 }
@@ -27,6 +28,7 @@ export default function OperatorContactDrawer({
   onSave,
   onReadyToContact,
   onClaimSingle,
+  onRelease,
   onDelete,
   saving,
 }: Props) {
@@ -54,6 +56,22 @@ export default function OperatorContactDrawer({
 
   const isMine = contact.assigned_to === userEmail;
   const isLocked = !isMine;
+
+  const isDirty = (
+    (draft.first_name ?? '') !== (contact.first_name ?? '') ||
+    (draft.last_name ?? '') !== (contact.last_name ?? '') ||
+    (draft.email ?? '') !== (contact.email ?? '') ||
+    (draft.instagram_url ?? '') !== (contact.instagram_url ?? '') ||
+    (draft.linkedin_url ?? '') !== (contact.linkedin_url ?? '') ||
+    (draft.employer ?? '') !== (contact.employer ?? '') ||
+    (draft.title ?? '') !== (contact.title ?? '') ||
+    (draft.occupation ?? '') !== (contact.occupation ?? '') ||
+    (draft.notes ?? '') !== (contact.notes ?? '')
+  );
+
+  const canReadyToContact = Boolean(
+    draft.instagram_url || draft.linkedin_url || draft.email,
+  );
 
   const setField = (field: keyof ContactPatch, value: string) => {
     setDraft((prev) => ({ ...prev, [field]: value }));
@@ -193,23 +211,43 @@ export default function OperatorContactDrawer({
             </div>
           </div>
 
+          {/* Dirty indicator */}
+          {isDirty && (
+            <div className="text-xs text-amber-600 font-medium">
+              Modifiche non salvate
+            </div>
+          )}
+
           {/* Bottoni */}
           <div className="flex items-center gap-3">
-            <Button onClick={handleSave} disabled={saving || isLocked} className="flex-1">
+            <Button onClick={handleSave} disabled={saving || isLocked || !isDirty} className="flex-1">
               {saving ? 'Salvataggio...' : 'Salva'}
             </Button>
-            <Button variant="outline" onClick={onReadyToContact} disabled={isLocked || contact.next_action === 'pronto_da_contattare'} className="flex-1">
+            <Button
+              variant="outline"
+              onClick={onReadyToContact}
+              disabled={isLocked || contact.next_action === 'pronto_da_contattare' || !canReadyToContact}
+              className="flex-1"
+              title={!canReadyToContact ? 'Aggiungi almeno un social o un\'email' : undefined}
+            >
               Pronto a contattare
             </Button>
           </div>
 
-          {/* Delete */}
-          {onDelete && isMine && (
-            <div className="pt-1">
-              <Button variant="outline" size="sm" className="w-full gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" onClick={onDelete}>
-                <Trash2 className="h-4 w-4" />
-                Elimina contatto
-              </Button>
+          {/* Release + Delete */}
+          {isMine && (
+            <div className="flex items-center gap-3 pt-1">
+              {onRelease && (
+                <Button variant="outline" size="sm" className="flex-1" onClick={onRelease}>
+                  Rilascia contatto
+                </Button>
+              )}
+              {onDelete && (
+                <Button variant="outline" size="sm" className="flex-1 gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" onClick={onDelete}>
+                  <Trash2 className="h-4 w-4" />
+                  Elimina
+                </Button>
+              )}
             </div>
           )}
 

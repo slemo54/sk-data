@@ -134,17 +134,37 @@ export async function fetchContacts(
   filters: ContactsFilters,
   pagination: Pagination,
   sort: ContactSort,
+  signal?: AbortSignal,
 ): Promise<ContactsResponse> {
   const sourceFilter = filters.source && filters.source !== 'all' ? filters.source : null;
-  const queryFilter = filters.query
-    ? `&or=(${[
-        `full_name.ilike.*${encodeURIComponent(escapeLike(filters.query))}*`,
-        `email.ilike.*${encodeURIComponent(escapeLike(filters.query))}*`,
-        `instagram_url.ilike.*${encodeURIComponent(escapeLike(filters.query))}*`,
-        `linkedin_url.ilike.*${encodeURIComponent(escapeLike(filters.query))}*`,
-        `employer.ilike.*${encodeURIComponent(escapeLike(filters.query))}*`,
-      ].join(',')})`
-    : '';
+  // Build multi-word AND-of-ORs: each word must match at least one field
+  let queryFilter = '';
+  if (filters.query) {
+    const words = filters.query.split(/\s+/).filter(Boolean);
+    const searchableFields = [
+      'full_name',
+      'first_name',
+      'last_name',
+      'email',
+      'instagram_url',
+      'linkedin_url',
+      'employer',
+      'title',
+      'occupation',
+      'city',
+      'country',
+      'notes',
+    ];
+    const wordConditions = words.map((word) => {
+      const ors = searchableFields
+        .map((f) => `${f}.ilike.*${encodeURIComponent(escapeLike(word))}*`)
+        .join(',');
+      return `or=(${ors})`;
+    });
+    queryFilter = wordConditions.length === 1
+      ? `&${wordConditions[0]}`
+      : `&and=(${wordConditions.join(',')})`;
+  }
 
   const countryFilter = filters.country && filters.country !== 'all' ? `&country=eq.${encodeURIComponent(filters.country)}` : '';
   const statusFilter = filters.status && filters.status !== 'all' ? `&status=eq.${filters.status}` : '';
@@ -158,6 +178,7 @@ export async function fetchContacts(
   while (hasMore) {
     const chunk = await sbFetch<Contact[]>(
       `/rest/v1/contacts?select=*${queryFilter}${countryFilter}${statusFilter}&order=${sort.field}.${sort.direction}&limit=${CHUNK_SIZE}&offset=${offsetFetch}`,
+      { signal },
     );
     
     allRows = [...allRows, ...chunk];
@@ -278,6 +299,13 @@ export async function toggleContacted(contactId: string, value: boolean): Promis
   return updateContact(contactId, { contacted: value });
 }
 
+export async function releaseContact(contactId: string): Promise<void> {
+  await sbFetch('/rest/v1/rpc/release_contact', {
+    method: 'POST',
+    body: JSON.stringify({ p_contact_id: contactId }),
+  });
+}
+
 export async function addNote(contactId: string, note: string): Promise<Contact> {
   return updateContact(contactId, { notes: note.trim() || null });
 }
@@ -294,31 +322,44 @@ export function computeDashboardKpi(contacts: Contact[]): DashboardKpi {
     (c) => c.next_action === 'pronto_da_contattare' && (c.instagram_url || c.linkedin_url),
   ).length;
   const contactedCount = contacts.filter((c) => c.contacted).length;
+  const approvedCount = contacts.filter((c) => c.approval).length;
 
   return {
     total: contacts.length,
     pendingReview,
     readyToContact,
     contacted: contactedCount,
+    approved: approvedCount,
   };
 }
 
 export async function fetchDashboardKpi(): Promise<DashboardKpi> {
-  let allRows: any[] = [];
-  let offsetFetch = 0;
-  const CHUNK_SIZE = 1000;
-  let hasMore = true;
+  type KpiRow = {
+    total: number;
+    pending_review: number;
+    ready_to_contact: number;
+    contacted: number;
+    approved: number;
+  };
+  const [row] = await sbFetch<Array<KpiRow>>(
+    '/rest/v1/rpc/get_dashboard_kpi',
+  );
+  return {
+    total: Number(row.total),
+    pendingReview: Number(row.pending_review),
+    readyToContact: Number(row.ready_to_contact),
+    contacted: Number(row.contacted),
+    approved: Number(row.approved),
+  };
+}
 
-  while (hasMore) {
-    const chunk = await sbFetch<any[]>(
-      `/rest/v1/contacts?select=review_status,next_action,contacted&limit=${CHUNK_SIZE}&offset=${offsetFetch}`,
-    );
-    allRows = [...allRows, ...chunk];
-    offsetFetch += CHUNK_SIZE;
-    if (chunk.length < CHUNK_SIZE || allRows.length >= 20000) {
-      hasMore = false;
-    }
-  }
-
-  return computeDashboardKpi(allRows as Contact[]);
+export async function fetchCountries(): Promise<string[]> {
+  const rows = await sbFetch<Array<{ country: string | null }>>(
+    '/rest/v1/contacts?select=country&country=not.is.null',
+  );
+  const set = new Set<string>();
+  rows.forEach((r) => {
+    if (r.country) set.add(r.country);
+  });
+  return [...set].sort();
 }

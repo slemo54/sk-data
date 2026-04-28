@@ -6,9 +6,11 @@ import {
   deleteContact,
   fetchContacts,
   fetchContactSources,
+  fetchCountries,
   fetchDashboardKpi,
   updateContact,
 } from '@/lib/contactsService';
+import { useDebounce } from '@/hooks/use-debounce';
 import type {
   Contact,
   ContactPatch,
@@ -23,6 +25,17 @@ import SKContactDrawer from '@/components/SKContactDrawer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -74,6 +87,7 @@ const DEFAULT_KPI: DashboardKpi = {
   pendingReview: 0,
   readyToContact: 0,
   contacted: 0,
+  approved: 0,
 };
 
 function statusBadgeClass(status: string): string {
@@ -124,6 +138,9 @@ export default function DashboardSK() {
   const [lastRefreshed, setLastRefreshed] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [allCountries, setAllCountries] = useState<string[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedQuery = useDebounce(searchInput, 300);
 
   const selectedContact = useMemo(
     () => contacts.find((c) => c.id === selectedContactId) ?? null,
@@ -143,8 +160,8 @@ export default function DashboardSK() {
       Boolean(filters.hasInstagram) ||
       Boolean(filters.hasLinkedin) ||
       Boolean(filters.hasEmail) ||
-      Boolean(filters.approved) ||
-      Boolean(filters.contacted)
+      filters.approved !== undefined ||
+      filters.contacted !== undefined
     );
   }, [filters]);
 
@@ -158,28 +175,43 @@ export default function DashboardSK() {
     }
   }, []);
 
-  const refreshContacts = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await fetchContacts(filters, { page, pageSize: PAGE_SIZE }, sort);
-      setContacts(response.rows);
-      setTotal(response.total);
-      if (!selectedContactId && response.rows.length) {
-        setSelectedContactId(response.rows[0].id);
+  const refreshContacts = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await fetchContacts(
+          filters,
+          { page, pageSize: PAGE_SIZE },
+          sort,
+          signal,
+        );
+        if (signal?.aborted) return;
+        setContacts(response.rows);
+        setTotal(response.total);
+        if (!selectedContactId && response.rows.length) {
+          setSelectedContactId(response.rows[0].id);
+        }
+        if (
+          selectedContactId &&
+          !response.rows.find((r) => r.id === selectedContactId)
+        ) {
+          setSelectedContactId(response.rows[0]?.id ?? '');
+        }
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return;
+        setError((err as Error).message || 'Errore caricamento contatti');
+      } finally {
+        setLoading(false);
       }
-      if (selectedContactId && !response.rows.find((r) => r.id === selectedContactId)) {
-        setSelectedContactId(response.rows[0]?.id ?? '');
-      }
-    } catch (err) {
-      setError((err as Error).message || 'Errore caricamento contatti');
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, page, selectedContactId, sort]);
+    },
+    [filters, page, selectedContactId, sort],
+  );
 
   useEffect(() => {
-    void refreshContacts();
+    const controller = new AbortController();
+    void refreshContacts(controller.signal);
+    return () => controller.abort();
   }, [refreshContacts]);
 
   useEffect(() => {
@@ -196,14 +228,18 @@ export default function DashboardSK() {
       .catch((err) => setError((err as Error).message || 'Errore provenance'));
   }, [selectedContactId]);
 
-  const countries = useMemo(
-    () => [...new Set(contacts.map((c) => c.country).filter(Boolean))].sort(),
-    [contacts],
-  );
+  useEffect(() => {
+    void fetchCountries().then(setAllCountries).catch(() => {/* silent */});
+  }, []);
+
+  useEffect(() => {
+    handleFilterChange({ query: debouncedQuery || undefined });
+  }, [debouncedQuery]);
 
   const handleFilterChange = (patch: Partial<ContactsFilters>) => {
     setPage(1);
     setFilters((prev) => ({ ...prev, ...patch }));
+    setSelectedIds(new Set());
   };
 
   const handleSort = (field: ContactSort['field']) => {
@@ -275,6 +311,7 @@ export default function DashboardSK() {
       reviewStatus: 'all',
       nextAction: 'all',
     });
+    setSearchInput('');
     setPage(1);
     setSelectedIds(new Set());
   };
@@ -413,10 +450,23 @@ export default function DashboardSK() {
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full p-6 space-y-6">
         {/* KPI */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div
-            className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => handleFilterChange({ nextAction: 'pronto_da_contattare' })}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {/* 1. Ready to Contact */}
+          <button
+            type="button"
+            aria-pressed={filters.nextAction === 'pronto_da_contattare'}
+            onClick={() =>
+              handleFilterChange(
+                filters.nextAction === 'pronto_da_contattare'
+                  ? { nextAction: 'all' }
+                  : { nextAction: 'pronto_da_contattare' },
+              )
+            }
+            className={`rounded-xl border p-5 shadow-sm flex items-center gap-4 text-left transition-colors ${
+              filters.nextAction === 'pronto_da_contattare'
+                ? 'ring-2 ring-emerald-500 bg-emerald-50/50'
+                : 'bg-card hover:bg-muted/50'
+            }`}
           >
             <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
               <MailOpen className="h-5 w-5" />
@@ -425,34 +475,46 @@ export default function DashboardSK() {
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ready to Contact</span>
               <span className="text-2xl font-bold">{kpi.readyToContact.toLocaleString()}</span>
             </div>
-          </div>
-          <div
-            className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => handleResetFilters()}
+          </button>
+
+          {/* 2. Approvati */}
+          <button
+            type="button"
+            aria-pressed={filters.approved === true}
+            onClick={() =>
+              handleFilterChange(
+                filters.approved === true ? { approved: undefined } : { approved: true },
+              )
+            }
+            className={`rounded-xl border p-5 shadow-sm flex items-center gap-4 text-left transition-colors ${
+              filters.approved === true
+                ? 'ring-2 ring-blue-500 bg-blue-50/50'
+                : 'bg-card hover:bg-muted/50'
+            }`}
           >
             <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-              <Users className="h-5 w-5" />
+              <CheckCircle2 className="h-5 w-5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Profiles</span>
-              <span className="text-2xl font-bold">{kpi.total.toLocaleString()}</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Approvati</span>
+              <span className="text-2xl font-bold">{kpi.approved.toLocaleString()}</span>
             </div>
-          </div>
-          <div
-            className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => handleFilterChange({ reviewStatus: 'unseen' })}
-          >
-            <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-              <EyeOff className="h-5 w-5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pending Review</span>
-              <span className="text-2xl font-bold">{kpi.pendingReview.toLocaleString()}</span>
-            </div>
-          </div>
-          <div
-            className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => handleFilterChange({ contacted: true })}
+          </button>
+
+          {/* 3. Contacted */}
+          <button
+            type="button"
+            aria-pressed={filters.contacted === true}
+            onClick={() =>
+              handleFilterChange(
+                filters.contacted === true ? { contacted: undefined } : { contacted: true },
+              )
+            }
+            className={`rounded-xl border p-5 shadow-sm flex items-center gap-4 text-left transition-colors ${
+              filters.contacted === true
+                ? 'ring-2 ring-orange-500 bg-orange-50/50'
+                : 'bg-card hover:bg-muted/50'
+            }`}
           >
             <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
               <CheckCircle2 className="h-5 w-5" />
@@ -461,7 +523,48 @@ export default function DashboardSK() {
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contacted</span>
               <span className="text-2xl font-bold">{kpi.contacted.toLocaleString()}</span>
             </div>
-          </div>
+          </button>
+
+          {/* 4. Tutti */}
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 text-left hover:bg-muted/50 transition-colors"
+          >
+            <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
+              <Users className="h-5 w-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tutti</span>
+              <span className="text-2xl font-bold">{kpi.total.toLocaleString()}</span>
+            </div>
+          </button>
+
+          {/* 5. Pending Review */}
+          <button
+            type="button"
+            aria-pressed={filters.reviewStatus === 'unseen'}
+            onClick={() =>
+              handleFilterChange(
+                filters.reviewStatus === 'unseen'
+                  ? { reviewStatus: 'all' }
+                  : { reviewStatus: 'unseen' },
+              )
+            }
+            className={`rounded-xl border p-5 shadow-sm flex items-center gap-4 text-left transition-colors ${
+              filters.reviewStatus === 'unseen'
+                ? 'ring-2 ring-amber-500 bg-amber-50/50'
+                : 'bg-card hover:bg-muted/50'
+            }`}
+          >
+            <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+              <EyeOff className="h-5 w-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pending Review</span>
+              <span className="text-2xl font-bold">{kpi.pendingReview.toLocaleString()}</span>
+            </div>
+          </button>
         </div>
 
         {/* Filters */}
@@ -471,8 +574,8 @@ export default function DashboardSK() {
               <Search className="h-4 w-4 text-muted-foreground shrink-0" />
               <Input
                 placeholder="Cerca nome, email, social, employer..."
-                value={filters.query ?? ''}
-                onChange={(e) => handleFilterChange({ query: e.target.value })}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="h-9"
               />
             </div>
@@ -507,6 +610,19 @@ export default function DashboardSK() {
               </SelectContent>
             </Select>
             <Select
+              value={filters.source ?? 'all'}
+              onValueChange={(v) => handleFilterChange({ source: v as 'all' | 'wine_awards' | 'guildsomm' })}
+            >
+              <SelectTrigger className="w-[160px] h-9 bg-background">
+                <SelectValue placeholder="Fonte" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutte le fonti</SelectItem>
+                <SelectItem value="wine_awards">Wine Awards</SelectItem>
+                <SelectItem value="guildsomm">GuildSomm</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
               value={filters.country ?? 'all'}
               onValueChange={(v) => handleFilterChange({ country: v === 'all' ? undefined : v })}
             >
@@ -515,7 +631,7 @@ export default function DashboardSK() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tutti i paesi</SelectItem>
-                {countries.map((c) => (
+                {allCountries.map((c) => (
                   <SelectItem key={c} value={c ?? ''}>{c}</SelectItem>
                 ))}
               </SelectContent>
@@ -535,14 +651,32 @@ export default function DashboardSK() {
               <Checkbox checked={Boolean(filters.hasEmail)} onCheckedChange={(v) => handleFilterChange({ hasEmail: Boolean(v) })} />
               <span className="text-muted-foreground">Email</span>
             </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <Checkbox checked={Boolean(filters.approved)} onCheckedChange={(v) => handleFilterChange({ approved: v ? true : undefined })} />
-              <span className="text-muted-foreground">Approvati</span>
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <Checkbox checked={Boolean(filters.contacted)} onCheckedChange={(v) => handleFilterChange({ contacted: v ? true : undefined })} />
-              <span className="text-muted-foreground">Contattati</span>
-            </label>
+            <Select
+              value={filters.approved === true ? 'yes' : filters.approved === false ? 'no' : 'all'}
+              onValueChange={(v) => handleFilterChange({ approved: v === 'yes' ? true : v === 'no' ? false : undefined })}
+            >
+              <SelectTrigger className="w-[110px] h-8 text-xs bg-background">
+                <SelectValue placeholder="Approvati" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutti</SelectItem>
+                <SelectItem value="yes">Approvati</SelectItem>
+                <SelectItem value="no">Non appr.</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.contacted === true ? 'yes' : filters.contacted === false ? 'no' : 'all'}
+              onValueChange={(v) => handleFilterChange({ contacted: v === 'yes' ? true : v === 'no' ? false : undefined })}
+            >
+              <SelectTrigger className="w-[110px] h-8 text-xs bg-background">
+                <SelectValue placeholder="Contattati" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutti</SelectItem>
+                <SelectItem value="yes">Contattati</SelectItem>
+                <SelectItem value="no">Non cont.</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="flex-1" />
             <Button
               variant="ghost"
@@ -571,10 +705,28 @@ export default function DashboardSK() {
                 <CheckCircle2 className="h-4 w-4" />
                 {bulkSaving ? 'Approvo...' : `Approva ${selectedIds.size}`}
               </Button>
-              <Button variant="outline" size="sm" onClick={handleBulkDelete} disabled={bulkSaving} className="gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700">
-                <Trash2 className="h-4 w-4" />
-                Elimina {selectedIds.size}
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={bulkSaving} className="gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700">
+                    <Trash2 className="h-4 w-4" />
+                    Elimina {selectedIds.size}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Conferma eliminazione di gruppo</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Sei sicuro di voler eliminare {selectedIds.size} contatto{selectedIds.size > 1 ? 'i' : ''}? Questa azione non può essere annullata.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annulla</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkDelete} className="bg-red-600 hover:bg-red-700">
+                      Elimina
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         )}
@@ -599,14 +751,31 @@ export default function DashboardSK() {
                       aria-label="Seleziona tutti"
                     />
                   </TableHead>
-                  <TableHead onClick={() => handleSort('full_name')} className="cursor-pointer whitespace-nowrap w-[220px]">Nome</TableHead>
-                  <TableHead className="whitespace-nowrap w-[200px]">Restaurant / Location</TableHead>
-                  <TableHead className="whitespace-nowrap text-center">Stato Operatore</TableHead>
+                  <TableHead onClick={() => handleSort('full_name')} className="cursor-pointer whitespace-nowrap w-[220px]">
+                    Nome {sort.field === 'full_name' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('employer')} className="cursor-pointer whitespace-nowrap w-[200px]">
+                    Restaurant / Location {sort.field === 'employer' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('status')} className="cursor-pointer whitespace-nowrap text-center">
+                    Stato {sort.field === 'status' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
+                  </TableHead>
                   <TableHead className="whitespace-nowrap text-center">Social</TableHead>
-                  <TableHead className="whitespace-nowrap text-center">Review</TableHead>
-                  <TableHead className="whitespace-nowrap text-center">Approval</TableHead>
-                  <TableHead className="whitespace-nowrap text-center">Contacted</TableHead>
-                  <TableHead className="whitespace-nowrap text-center">Assegnato</TableHead>
+                  <TableHead onClick={() => handleSort('next_action')} className="cursor-pointer whitespace-nowrap text-center">
+                    Next Action {sort.field === 'next_action' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('review_status')} className="cursor-pointer whitespace-nowrap text-center">
+                    Review {sort.field === 'review_status' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('approval')} className="cursor-pointer whitespace-nowrap text-center">
+                    Approval {sort.field === 'approval' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('contacted')} className="cursor-pointer whitespace-nowrap text-center">
+                    Contacted {sort.field === 'contacted' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('assigned_to')} className="cursor-pointer whitespace-nowrap text-center">
+                    Assegnato {sort.field === 'assigned_to' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
+                  </TableHead>
                   <TableHead className="whitespace-nowrap text-center">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
@@ -674,6 +843,11 @@ export default function DashboardSK() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
+                      <Badge variant="outline" className={statusBadgeClass(contact.status)}>
+                        {statusLabel(contact.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
                       {contact.instagram_url && contact.linkedin_url ? (
                         <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1">
                           <Instagram className="h-3 w-3" />
@@ -689,6 +863,15 @@ export default function DashboardSK() {
                         <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">
                           Mancante
                         </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center text-xs">
+                      {contact.next_action ? (
+                        <Badge variant="outline" className="text-[10px]">
+                          {contact.next_action.replace(/_/g, ' ')}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
