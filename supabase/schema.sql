@@ -289,3 +289,24 @@ grant execute on function public.claim_contacts(integer, text) to anon, authenti
 grant execute on function public.claim_single_contact(uuid, text) to anon, authenticated;
 grant execute on function public.mark_social_ready() to anon, authenticated;
 grant execute on function public.get_my_role() to anon, authenticated;
+
+-- Auto-populate normalized_name from full_name on insert/update
+-- Fixes "null value in column normalized_name violates not-null constraint"
+create or replace function public.set_normalized_name()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if NEW.normalized_name is null or NEW.normalized_name = '' or (TG_OP = 'UPDATE' and OLD.full_name is distinct from NEW.full_name) then
+    NEW.normalized_name := lower(trim(coalesce(NEW.full_name, '')));
+  end if;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists trg_set_normalized_name on public.contacts;
+create trigger trg_set_normalized_name
+before insert or update on public.contacts
+for each row
+execute function public.set_normalized_name();
