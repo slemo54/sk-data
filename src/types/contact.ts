@@ -15,6 +15,8 @@ export type ContactSourceName = 'wine_awards' | 'guildsomm';
 export interface Contact {
   id: string;
   full_name: string;
+  first_name: string | null;
+  last_name: string | null;
   normalized_name: string;
   city: string | null;
   country: string | null;
@@ -94,6 +96,9 @@ export interface ContactsResponse {
 }
 
 export interface ContactPatch {
+  full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   email?: string | null;
   instagram_url?: string | null;
   linkedin_url?: string | null;
@@ -109,7 +114,9 @@ export interface ContactPatch {
 }
 
 export interface ContactCreate {
-  full_name: string;
+  full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   email?: string | null;
   instagram_url?: string | null;
   linkedin_url?: string | null;

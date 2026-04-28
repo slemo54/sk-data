@@ -7,6 +7,8 @@ create extension if not exists pgcrypto;
 create table if not exists public.contacts (
   id uuid primary key default gen_random_uuid(),
   full_name text not null,
+  first_name text,
+  last_name text,
   normalized_name text not null,
   city text,
   country text,
@@ -72,6 +74,26 @@ create index if not exists idx_contacts_country on public.contacts(country);
 create index if not exists idx_contacts_review_status on public.contacts(review_status);
 create index if not exists idx_contacts_next_action on public.contacts(next_action);
 create index if not exists idx_contact_sources_contact_id on public.contact_sources(contact_id);
+
+-- Auto-populate full_name from first_name + last_name
+create or replace function public.set_full_name()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if NEW.first_name is not null or NEW.last_name is not null then
+    NEW.full_name := trim(coalesce(NEW.first_name, '') || ' ' || coalesce(NEW.last_name, ''));
+  end if;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists trg_set_full_name on public.contacts;
+create trigger trg_set_full_name
+before insert or update on public.contacts
+for each row
+execute function public.set_full_name();
 
 -- Updated at trigger
 create or replace function public.set_updated_at()
@@ -297,9 +319,12 @@ returns trigger
 language plpgsql
 set search_path = public
 as $$
+declare
+  effective_full_name text;
 begin
-  if NEW.normalized_name is null or NEW.normalized_name = '' or (TG_OP = 'UPDATE' and OLD.full_name is distinct from NEW.full_name) then
-    NEW.normalized_name := lower(trim(coalesce(NEW.full_name, '')));
+  effective_full_name := coalesce(NEW.full_name, trim(coalesce(NEW.first_name, '') || ' ' || coalesce(NEW.last_name, '')));
+  if NEW.normalized_name is null or NEW.normalized_name = '' or (TG_OP = 'UPDATE' and (OLD.full_name is distinct from NEW.full_name or OLD.first_name is distinct from NEW.first_name or OLD.last_name is distinct from NEW.last_name)) then
+    NEW.normalized_name := lower(trim(coalesce(effective_full_name, '')));
   end if;
   return NEW;
 end;
@@ -310,3 +335,9 @@ create trigger trg_set_normalized_name
 before insert or update on public.contacts
 for each row
 execute function public.set_normalized_name();
+
+-- Migration: split existing full_name into first_name / last_name
+update public.contacts
+set first_name = trim(split_part(full_name, ' ', 1)),
+    last_name = trim(substr(full_name, length(split_part(full_name, ' ', 1)) + 2))
+where first_name is null and full_name is not null;

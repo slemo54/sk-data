@@ -24,7 +24,8 @@ interface Props {
 
 export default function OperatorCreateContactDrawer({ open, onOpenChange, onCreate, saving }: Props) {
   const [draft, setDraft] = useState<ContactCreate>({
-    full_name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     instagram_url: '',
     linkedin_url: '',
@@ -41,11 +42,13 @@ export default function OperatorCreateContactDrawer({ open, onOpenChange, onCrea
   };
 
   const handleSave = () => {
-    const name = draft.full_name.trim();
-    if (!name) return;
+    const first = draft.first_name?.trim() || '';
+    const last = draft.last_name?.trim() || '';
+    if (!first && !last) return;
     onCreate({
       ...draft,
-      full_name: name,
+      first_name: first || null,
+      last_name: last || null,
       email: draft.email?.trim() || null,
       instagram_url: draft.instagram_url?.trim() || null,
       linkedin_url: draft.linkedin_url?.trim() || null,
@@ -61,7 +64,8 @@ export default function OperatorCreateContactDrawer({ open, onOpenChange, onCrea
   const handleOpenChange = (val: boolean) => {
     if (!val) {
       setDraft({
-        full_name: '',
+        first_name: '',
+        last_name: '',
         email: '',
         instagram_url: '',
         linkedin_url: '',
@@ -90,12 +94,20 @@ export default function OperatorCreateContactDrawer({ open, onOpenChange, onCrea
               <User className="h-7 w-7" />
             </div>
             <div className="flex-1 min-w-0 space-y-2">
-              <Input
-                placeholder="Nome completo *"
-                value={draft.full_name}
-                onChange={(e) => setField('full_name', e.target.value)}
-                className="h-10"
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Nome *"
+                  value={draft.first_name ?? ''}
+                  onChange={(e) => setField('first_name', e.target.value)}
+                  className="h-10"
+                />
+                <Input
+                  placeholder="Cognome *"
+                  value={draft.last_name ?? ''}
+                  onChange={(e) => setField('last_name', e.target.value)}
+                  className="h-10"
+                />
+              </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="h-3.5 w-3.5" />
                 <Input
@@ -215,7 +227,7 @@ export default function OperatorCreateContactDrawer({ open, onOpenChange, onCrea
 
           {/* Bottoni */}
           <div className="flex items-center gap-3 pt-2">
-            <Button onClick={handleSave} disabled={saving || !draft.full_name.trim()} className="flex-1">
+            <Button onClick={handleSave} disabled={saving || (!draft.first_name?.trim() && !draft.last_name?.trim())} className="flex-1">
               {saving ? 'Salvataggio...' : 'Salva contatto'}
             </Button>
           </div>

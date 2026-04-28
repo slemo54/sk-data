@@ -22,6 +22,8 @@ function applyFilters(contacts: Contact[], filters: ContactsFilters): Contact[] 
       const query = filters.query.toLowerCase();
       const haystack = [
         contact.full_name,
+        contact.first_name,
+        contact.last_name,
         contact.email,
         contact.instagram_url,
         contact.linkedin_url,
@@ -36,7 +38,10 @@ function applyFilters(contacts: Contact[], filters: ContactsFilters): Contact[] 
         .join(' ')
         .toLowerCase();
 
-      if (!haystack.includes(query)) {
+      // Fuzzy word search: every word in the query must be a substring of the haystack
+      const words = query.split(/\s+/).filter(Boolean);
+      const allMatch = words.every((word) => haystack.includes(word));
+      if (!allMatch) {
         return false;
       }
     }

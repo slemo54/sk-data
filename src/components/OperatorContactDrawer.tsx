@@ -36,6 +36,8 @@ export default function OperatorContactDrawer({
       return;
     }
     setDraft({
+      first_name: contact.first_name,
+      last_name: contact.last_name,
       email: contact.email,
       instagram_url: contact.instagram_url,
       linkedin_url: contact.linkedin_url,
@@ -58,6 +60,8 @@ export default function OperatorContactDrawer({
   const handleSave = () => {
     if (isLocked) return;
     const patch: ContactPatch = {
+      first_name: draft.first_name?.trim() || null,
+      last_name: draft.last_name?.trim() || null,
       email: draft.email?.trim() || null,
       instagram_url: draft.instagram_url?.trim() || null,
       linkedin_url: draft.linkedin_url?.trim() || null,
@@ -82,9 +86,24 @@ export default function OperatorContactDrawer({
             <div className="h-14 w-14 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 shrink-0">
               <User className="h-7 w-7" />
             </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold">{contact.full_name}</h2>
-              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Nome"
+                  value={draft.first_name ?? ''}
+                  onChange={(e) => setField('first_name', e.target.value)}
+                  disabled={isLocked}
+                  className="h-9"
+                />
+                <Input
+                  placeholder="Cognome"
+                  value={draft.last_name ?? ''}
+                  onChange={(e) => setField('last_name', e.target.value)}
+                  disabled={isLocked}
+                  className="h-9"
+                />
+              </div>
+              <p className="text-sm text-muted-foreground flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5" />
                 {[contact.city, contact.country].filter(Boolean).join(', ') || 'Località non disponibile'}
               </p>
