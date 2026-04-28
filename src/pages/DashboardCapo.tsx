@@ -67,7 +67,7 @@ import {
   X,
 } from 'lucide-react';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 10;
 
 const DEFAULT_KPI: DashboardKpi = {
   total: 0,
