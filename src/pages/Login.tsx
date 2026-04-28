@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 type UserRole = 'admin' | 'operator' | null;
 
 const SK_EMAIL = 'kim@mammajumboshrimp.com';
+const SK_PASSWORD = 'wine2digital';
 
 function extractRole(user: User | null): UserRole {
   if (!user) return null;
@@ -77,11 +78,15 @@ export default function Login() {
   const handleSKLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setSkError('');
+    if (skPassword !== SK_PASSWORD) {
+      setSkError('Password errata');
+      return;
+    }
     setSkLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: SK_EMAIL,
-        password: skPassword,
+        password: SK_PASSWORD,
       });
       if (error) throw error;
       navigate('/', { replace: true });
