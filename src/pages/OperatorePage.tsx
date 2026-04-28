@@ -286,6 +286,16 @@ export default function OperatorePage() {
     navigate('/login');
   };
 
+  function getSocialHandle(url: string | null): string | null {
+    if (!url) return null;
+    try {
+      const u = new URL(url);
+      return u.pathname.replace(/^\//, '').split('/')[0] || null;
+    } catch {
+      return null;
+    }
+  }
+
   const handleResetFilters = () => {
     setFilters({
       source: 'all',
@@ -585,10 +595,10 @@ export default function OperatorePage() {
                           <span className="font-semibold text-sm">{contact.full_name}</span>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             {contact.instagram_url && (
-                              <span className="flex items-center gap-1"><Instagram className="h-3 w-3 text-pink-600" />@{new URL(contact.instagram_url).pathname.replace(/^\//, '').split('/')[0]}</span>
+                              <span className="flex items-center gap-1"><Instagram className="h-3 w-3 text-pink-600" />@{getSocialHandle(contact.instagram_url) || 'IG'}</span>
                             )}
                             {contact.linkedin_url && (
-                              <span className="flex items-center gap-1"><Linkedin className="h-3 w-3 text-blue-700" />{new URL(contact.linkedin_url).pathname.replace(/^\//, '').split('/')[0]}</span>
+                              <span className="flex items-center gap-1"><Linkedin className="h-3 w-3 text-blue-700" />{getSocialHandle(contact.linkedin_url) || 'LI'}</span>
                             )}
                             {!contact.instagram_url && !contact.linkedin_url && <span className="italic">Nessun social</span>}
                           </div>
