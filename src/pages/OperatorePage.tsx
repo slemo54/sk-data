@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import OperatorContactDrawer from '@/components/OperatorContactDrawer';
+import OperatorCreateContactDrawer from '@/components/OperatorCreateContactDrawer';
 import {
   // addNote,
   claimContacts,
   claimSingleContact,
+  createContact,
   fetchContacts,
   fetchContactSources,
   fetchDashboardKpi,
@@ -55,6 +57,7 @@ import {
   LogOut,
   MessageSquare,
   // NotebookPen,
+  Plus,
   RefreshCw,
   Search,
   X,
@@ -104,6 +107,8 @@ export default function OperatorePage() {
   const [selectedContactId, setSelectedContactId] = useState<string>('');
   const [selectedSources, setSelectedSources] = useState<ContactSource[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [createSheetOpen, setCreateSheetOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState('');
 
   const userEmail = user?.email ?? '';
@@ -230,6 +235,21 @@ export default function OperatorePage() {
     }
   };
 
+  const handleCreateContact = async (data: import('@/types/contact').ContactCreate) => {
+    setCreating(true);
+    try {
+      await createContact(data);
+      toast.success('Contatto creato');
+      setCreateSheetOpen(false);
+      await refreshContacts();
+      await refreshKpi();
+    } catch (err) {
+      toast.error((err as Error).message || 'Creazione fallita');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleSave = async (patch: ContactPatch) => {
     if (!selectedContact) return;
     try {
@@ -314,6 +334,10 @@ export default function OperatorePage() {
             <Button variant="outline" size="sm" onClick={() => void refreshContacts()} className="gap-2">
               <RefreshCw className="h-4 w-4" />
               Refresh
+            </Button>
+            <Button variant="default" size="sm" onClick={() => setCreateSheetOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Aggiungi
             </Button>
             {lastRefreshed && (
               <span className="text-xs text-muted-foreground hidden md:inline">{lastRefreshed}</span>
@@ -659,6 +683,13 @@ export default function OperatorePage() {
           if (selectedContact) void handleClaimSingle();
         }}
         saving={false}
+      />
+
+      <OperatorCreateContactDrawer
+        open={createSheetOpen}
+        onOpenChange={setCreateSheetOpen}
+        onCreate={handleCreateContact}
+        saving={creating}
       />
     </div>
   );

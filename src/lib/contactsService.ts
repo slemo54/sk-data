@@ -1,5 +1,6 @@
 import type {
   Contact,
+  ContactCreate,
   ContactPatch,
   ContactSource,
   ContactsFilters,
@@ -207,6 +208,22 @@ export async function updateContact(contactId: string, patch: ContactPatch): Pro
 
   if (!rows.length) {
     throw new Error('Contact not found after update.');
+  }
+
+  return rows[0];
+}
+
+export async function createContact(data: ContactCreate): Promise<Contact> {
+  const rows = await sbFetch<Contact[]>('/rest/v1/contacts', {
+    method: 'POST',
+    headers: {
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!rows.length) {
+    throw new Error('Contact not created.');
   }
 
   return rows[0];

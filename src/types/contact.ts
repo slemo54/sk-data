@@ -108,6 +108,19 @@ export interface ContactPatch {
   status?: ReviewStatus;
 }
 
+export interface ContactCreate {
+  full_name: string;
+  email?: string | null;
+  instagram_url?: string | null;
+  linkedin_url?: string | null;
+  employer?: string | null;
+  title?: string | null;
+  occupation?: string | null;
+  city?: string | null;
+  country?: string | null;
+  notes?: string | null;
+}
+
 export interface DashboardKpi {
   total: number;
   pendingReview: number;
