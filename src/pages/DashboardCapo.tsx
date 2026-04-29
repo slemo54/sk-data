@@ -44,7 +44,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import {
   Tooltip,
   TooltipContent,
@@ -760,10 +759,6 @@ export default function DashboardSK() {
                   <TableHead onClick={() => handleSort('status')} className="cursor-pointer whitespace-nowrap text-center">
                     Stato {sort.field === 'status' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
                   </TableHead>
-                  <TableHead className="whitespace-nowrap text-center">Social</TableHead>
-                  <TableHead onClick={() => handleSort('next_action')} className="cursor-pointer whitespace-nowrap text-center">
-                    Next Action {sort.field === 'next_action' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
-                  </TableHead>
                   <TableHead onClick={() => handleSort('review_status')} className="cursor-pointer whitespace-nowrap text-center">
                     Review {sort.field === 'review_status' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
                   </TableHead>
@@ -782,7 +777,7 @@ export default function DashboardSK() {
               <TableBody>
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         Caricamento contatti...
@@ -792,7 +787,7 @@ export default function DashboardSK() {
                 )}
                 {!loading && !contacts.length && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       Nessun contatto trovato.
                     </TableCell>
                   </TableRow>
@@ -847,33 +842,6 @@ export default function DashboardSK() {
                         {statusLabel(contact.status)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center">
-                      {contact.instagram_url && contact.linkedin_url ? (
-                        <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1">
-                          <Instagram className="h-3 w-3" />
-                          <Linkedin className="h-3 w-3" />
-                          Completo
-                        </Badge>
-                      ) : contact.instagram_url || contact.linkedin_url ? (
-                        <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 gap-1">
-                          {contact.instagram_url ? <Instagram className="h-3 w-3" /> : <Linkedin className="h-3 w-3" />}
-                          Parziale
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">
-                          Mancante
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center text-xs">
-                      {contact.next_action ? (
-                        <Badge variant="outline" className="text-[10px]">
-                          {contact.next_action.replace(/_/g, ' ')}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
                       <button onClick={() => void toggleField(contact, 'review_status')} className="focus:outline-none">
                         <Badge
@@ -887,7 +855,9 @@ export default function DashboardSK() {
                       </button>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
-                      <Switch checked={contact.approval} onCheckedChange={() => void toggleField(contact, 'approval')} aria-label="Toggle approval" />
+                      <button onClick={() => void toggleField(contact, 'approval')} className="focus:outline-none inline-flex items-center justify-center h-8 w-8 rounded-full hover:bg-muted transition-colors">
+                        {contact.approval ? <Check className="h-5 w-5 text-emerald-600" /> : <X className="h-5 w-5 text-red-400" />}
+                      </button>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
                       <button onClick={() => void toggleField(contact, 'contacted')} className="focus:outline-none inline-flex items-center justify-center h-8 w-8 rounded-full hover:bg-muted transition-colors">
