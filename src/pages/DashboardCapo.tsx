@@ -837,11 +837,6 @@ export default function DashboardSK() {
                         {statusLabel(contact.status)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className={statusBadgeClass(contact.status)}>
-                        {statusLabel(contact.status)}
-                      </Badge>
-                    </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
                       <button onClick={() => void toggleField(contact, 'review_status')} className="focus:outline-none">
                         <Badge
