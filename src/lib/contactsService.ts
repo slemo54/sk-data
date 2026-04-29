@@ -110,10 +110,6 @@ function buildFilters(filters: ContactsFilters): string {
     params.push(`and=(assigned_to.not.eq.${encodeURIComponent(filters.userId)},assigned_to.not.is.null)`);
   }
 
-  if (filters.source && filters.source !== 'all') {
-    params.push(`contact_sources.source=eq.${encodeURIComponent(filters.source)}`);
-  }
-
   return params.length ? `&${params.join('&')}` : '';
 }
 
@@ -123,12 +119,23 @@ export async function fetchContacts(
   sort: ContactSort,
   signal?: AbortSignal,
 ): Promise<ContactsResponse> {
+  const hasSourceFilter = filters.source && filters.source !== 'all';
+
+  // Per filtro su source usiamo embedded resource con !inner
+  const selectClause = hasSourceFilter
+    ? '*,contact_sources!inner(source)'
+    : '*';
+
   const filterParams = buildFilters(filters);
+  const sourceFilter = hasSourceFilter
+    ? `&contact_sources.source=eq.${encodeURIComponent(filters.source!)}`
+    : '';
+
   const offset = (pagination.page - 1) * pagination.pageSize;
   const order = `order=${sort.field}.${sort.direction}`;
 
   const { data: rows, count: total } = await sbFetchWithCount<Contact[]>(
-    `/rest/v1/contacts?select=*${filterParams}&${order}&limit=${pagination.pageSize}&offset=${offset}`,
+    `/rest/v1/contacts?select=${selectClause}${filterParams}${sourceFilter}&${order}&limit=${pagination.pageSize}&offset=${offset}`,
     { signal },
   );
 
