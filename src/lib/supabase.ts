@@ -42,6 +42,40 @@ export async function sbFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+export async function sbFetchWithCount<T>(path: string, init?: RequestInit): Promise<{ data: T; count: number }> {
+  if (!url || !anonKey) {
+    throw new Error('Missing Supabase environment variables.');
+  }
+
+  const response = await fetch(`${url}${path}`, {
+    ...init,
+    headers: {
+      ...buildHeaders(),
+      ...(init?.headers ?? {}),
+      Prefer: 'count=exact',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Supabase ${response.status}: ${errorText}`);
+  }
+
+  const contentRange = response.headers.get('content-range');
+  let count = 0;
+  if (contentRange) {
+    const match = contentRange.match(/\/(\d+)$/);
+    if (match) count = Number(match[1]);
+  }
+
+  if (response.status === 204) {
+    return { data: undefined as T, count };
+  }
+
+  const data = (await response.json()) as T;
+  return { data, count };
+}
+
 export function getSupabaseRestHeaders(extra?: Record<string, string>): HeadersInit {
   return buildHeaders(extra);
 }

@@ -10,7 +10,7 @@ import type {
   Pagination,
   ReviewStatus,
 } from '@/types/contact';
-import { sbFetch } from '@/lib/supabase';
+import { sbFetch, sbFetchWithCount } from '@/lib/supabase';
 
 function escapeLike(value: string): string {
   return value.replaceAll('%', '\\%').replaceAll('_', '\\_');
@@ -127,19 +127,10 @@ export async function fetchContacts(
   const offset = (pagination.page - 1) * pagination.pageSize;
   const order = `order=${sort.field}.${sort.direction}`;
 
-  // Fetch paginated data
-  const rows = await sbFetch<Contact[]>(
+  const { data: rows, count: total } = await sbFetchWithCount<Contact[]>(
     `/rest/v1/contacts?select=*${filterParams}&${order}&limit=${pagination.pageSize}&offset=${offset}`,
     { signal },
   );
-
-  // Fetch total count with same filters
-  const countResult = await sbFetch<Array<{ count: number }>>(
-    `/rest/v1/contacts?select=count()${filterParams}`,
-    { signal },
-  );
-
-  const total = Number(countResult[0]?.count ?? 0);
 
   return {
     rows,
