@@ -920,6 +920,10 @@ export default function DashboardSK() {
         </div>
       </main>
 
+      <footer className="py-2 text-center text-[10px] text-muted-foreground/40 border-t border-border/40">
+        by Anselmo Acquah
+      </footer>
+
       <SKContactDrawer
         contact={selectedContact}
         sources={selectedSources}
