@@ -363,3 +363,14 @@ export async function fetchCountries(): Promise<string[]> {
   });
   return [...set].sort();
 }
+
+export async function fetchCities(): Promise<string[]> {
+  const rows = await sbFetch<Array<{ city: string | null }>>(
+    '/rest/v1/contacts?select=city&city=not.is.null',
+  );
+  const set = new Set<string>();
+  rows.forEach((r) => {
+    if (r.city) set.add(r.city);
+  });
+  return [...set].sort();
+}

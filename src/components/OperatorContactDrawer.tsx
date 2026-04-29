@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import type { Contact, ContactSource, ContactPatch } from '@/types/contact';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Lock, ExternalLink, MapPin, User, Building2, Briefcase, FileText, Trash2 } from 'lucide-react';
 
@@ -17,6 +24,7 @@ interface Props {
   onRelease?: () => void;
   onDelete?: () => void;
   saving: boolean;
+  cities?: string[];
 }
 
 export default function OperatorContactDrawer({
@@ -31,6 +39,7 @@ export default function OperatorContactDrawer({
   onRelease,
   onDelete,
   saving,
+  cities = [],
 }: Props) {
   const [draft, setDraft] = useState<ContactPatch>({});
 
@@ -123,10 +132,23 @@ export default function OperatorContactDrawer({
                   className="h-9"
                 />
               </div>
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                {[contact.city, contact.country].filter(Boolean).join(', ') || 'Località non disponibile'}
-              </p>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                <Select
+                  value={draft.city ?? ''}
+                  onValueChange={(v) => setField('city', v)}
+                  disabled={isLocked}
+                >
+                  <SelectTrigger className="h-8 text-xs w-full">
+                    <SelectValue placeholder="Seleziona città..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cities.map((city) => (
+                      <SelectItem key={city} value={city}>{city}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

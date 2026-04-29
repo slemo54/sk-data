@@ -115,6 +115,8 @@ export interface ContactPatch {
   contacted?: boolean;
   notes?: string | null;
   status?: ReviewStatus;
+  city?: string | null;
+  country?: string | null;
 }
 
 export interface ContactCreate {

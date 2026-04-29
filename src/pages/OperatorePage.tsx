@@ -13,6 +13,7 @@ import {
   fetchContacts,
   fetchContactSources,
   fetchCountries,
+  fetchCities,
   fetchDashboardKpi,
   releaseContact,
   toggleApproval,
@@ -49,7 +50,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Check,
   ChevronLeft,
@@ -119,9 +119,9 @@ export default function OperatorePage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSaving, setBulkSaving] = useState(false);
   const [allCountries, setAllCountries] = useState<string[]>([]);
+  const [allCities, setAllCities] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const debouncedQuery = useDebounce(searchInput, 300);
-  const [activeTab, setActiveTab] = useState<string>('all');
 
   const userEmail = user?.email ?? '';
 
@@ -197,6 +197,7 @@ export default function OperatorePage() {
 
   useEffect(() => {
     void fetchCountries().then(setAllCountries).catch(() => { /* silent */ });
+    void fetchCities().then(setAllCities).catch(() => { /* silent */ });
   }, []);
 
   useEffect(() => {
@@ -207,38 +208,6 @@ export default function OperatorePage() {
     setPage(1);
     setFilters((prev) => ({ ...prev, ...patch }));
     setSelectedIds(new Set());
-  };
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    const base: ContactsFilters = {
-      source: 'all',
-      status: 'all',
-      reviewStatus: 'all',
-      nextAction: 'all',
-    };
-    switch (tab) {
-      case 'mine':
-        handleFilterChange({ ...base, assignedToMe: true, userId: userEmail });
-        break;
-      case 'unassigned':
-        handleFilterChange({ ...base, unassigned: true });
-        break;
-      case 'others':
-        handleFilterChange({ ...base, assignedToOthers: true, userId: userEmail });
-        break;
-      case 'ready':
-        handleFilterChange({
-          ...base,
-          nextAction: 'pronto_da_contattare',
-          hasInstagram: undefined,
-          hasLinkedin: undefined,
-        });
-        break;
-      default:
-        handleFilterChange(base);
-        break;
-    }
   };
 
   const handleSort = (field: ContactSort['field']) => {
@@ -437,7 +406,6 @@ export default function OperatorePage() {
   }
 
   const handleResetFilters = () => {
-    setActiveTab('all');
     setFilters({
       source: 'all',
       status: 'all',
@@ -633,15 +601,18 @@ export default function OperatorePage() {
                 <Checkbox checked={Boolean(filters.contacted)} onCheckedChange={(v) => handleFilterChange({ contacted: v ? true : undefined })} />
                 <span className="text-muted-foreground">Contattati</span>
               </label>
-              <Tabs value={activeTab} onValueChange={handleTabChange} className="w-auto">
-                <TabsList className="h-8">
-                  <TabsTrigger value="all" className="text-xs px-3">Tutti</TabsTrigger>
-                  <TabsTrigger value="mine" className="text-xs px-3">Mine</TabsTrigger>
-                  <TabsTrigger value="unassigned" className="text-xs px-3">Da assegnare</TabsTrigger>
-                  <TabsTrigger value="others" className="text-xs px-3">Altri</TabsTrigger>
-                  <TabsTrigger value="ready" className="text-xs px-3">Ready</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={Boolean(filters.assignedToMe)} onCheckedChange={(v) => handleFilterChange({ assignedToMe: Boolean(v), userId: userEmail })} />
+                <span className="text-muted-foreground">Assegnati a me</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={Boolean(filters.unassigned)} onCheckedChange={(v) => handleFilterChange({ unassigned: Boolean(v) })} />
+                <span className="text-muted-foreground">Non assegnati</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={Boolean(filters.assignedToOthers)} onCheckedChange={(v) => handleFilterChange({ assignedToOthers: Boolean(v), userId: userEmail })} />
+                <span className="text-muted-foreground">Assegnati ad altri</span>
+              </label>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={handleResetFilters} className="text-muted-foreground">
@@ -870,6 +841,7 @@ export default function OperatorePage() {
           if (selectedContact) void handleDelete(selectedContact.id);
         }}
         saving={false}
+        cities={allCities}
       />
 
       <OperatorCreateContactDrawer
