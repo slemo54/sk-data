@@ -3,14 +3,17 @@ import type { Contact, ContactSource, ContactPatch } from '@/types/contact';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Lock, ExternalLink, MapPin, User, Building2, Briefcase, FileText, Trash2 } from 'lucide-react';
+import { Lock, ExternalLink, MapPin, User, Building2, Briefcase, FileText, Trash2, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Props {
   contact: Contact | null;
@@ -42,6 +45,7 @@ export default function OperatorContactDrawer({
   cities = [],
 }: Props) {
   const [draft, setDraft] = useState<ContactPatch>({});
+  const [cityOpen, setCityOpen] = useState(false);
 
   useEffect(() => {
     if (!contact) {
@@ -133,21 +137,49 @@ export default function OperatorContactDrawer({
                 />
               </div>
               <div className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                <Select
-                  value={draft.city ?? ''}
-                  onValueChange={(v) => setField('city', v)}
-                  disabled={isLocked}
-                >
-                  <SelectTrigger className="h-8 text-xs w-full">
-                    <SelectValue placeholder="Seleziona città..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cities.map((city) => (
-                      <SelectItem key={city} value={city}>{city}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={cityOpen}
+                      className="w-full justify-between h-8 text-xs font-normal"
+                      disabled={isLocked}
+                    >
+                      {draft.city || 'Seleziona o digita città...'}
+                      <span className="ml-2 opacity-50">⌄</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Cerca città..." />
+                      <CommandList>
+                        <CommandEmpty>Nessuna città trovata. Scrivi per aggiungere.</CommandEmpty>
+                        <CommandGroup>
+                          {cities.map((city) => (
+                            <CommandItem
+                              key={city}
+                              value={city}
+                              onSelect={() => {
+                                setField('city', city);
+                                setCityOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  draft.city === city ? 'opacity-100' : 'opacity-0',
+                                )}
+                              />
+                              {city}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </div>
