@@ -16,118 +16,105 @@ function escapeLike(value: string): string {
   return value.replaceAll('%', '\\%').replaceAll('_', '\\_');
 }
 
-function applyFilters(contacts: Contact[], filters: ContactsFilters): Contact[] {
-  return contacts.filter((contact) => {
-    if (filters.query) {
-      const query = filters.query.toLowerCase();
-      const haystack = [
-        contact.full_name,
-        contact.first_name,
-        contact.last_name,
-        contact.email,
-        contact.instagram_url,
-        contact.linkedin_url,
-        contact.employer,
-        contact.title,
-        contact.occupation,
-        contact.city,
-        contact.country,
-        contact.notes,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
+function buildSearchFilter(query: string): string {
+  const words = query.split(/\s+/).filter(Boolean);
+  if (!words.length) return '';
 
-      // Fuzzy word search: every word in the query must be a substring of the haystack
-      const words = query.split(/\s+/).filter(Boolean);
-      const allMatch = words.every((word) => haystack.includes(word));
-      if (!allMatch) {
-        return false;
-      }
-    }
+  const searchableFields = [
+    'full_name',
+    'first_name',
+    'last_name',
+    'email',
+    'instagram_url',
+    'linkedin_url',
+    'employer',
+    'title',
+    'occupation',
+    'city',
+    'country',
+    'notes',
+  ];
 
-    if (filters.country && filters.country !== 'all' && contact.country !== filters.country) {
-      return false;
-    }
-
-    if (filters.status && filters.status !== 'all' && contact.status !== filters.status) {
-      return false;
-    }
-
-    if (filters.reviewStatus && filters.reviewStatus !== 'all' && contact.review_status !== filters.reviewStatus) {
-      return false;
-    }
-
-    if (filters.nextAction && filters.nextAction !== 'all' && contact.next_action !== filters.nextAction) {
-      return false;
-    }
-
-    // Escludi "pronto da contattare" senza social
-    if (filters.nextAction === 'pronto_da_contattare' && !contact.instagram_url && !contact.linkedin_url) {
-      return false;
-    }
-
-    if (filters.approved === true && !contact.approval) {
-      return false;
-    }
-
-    if (filters.approved === false && contact.approval) {
-      return false;
-    }
-
-    if (filters.contacted === true && !contact.contacted) {
-      return false;
-    }
-
-    if (filters.contacted === false && contact.contacted) {
-      return false;
-    }
-
-    if (filters.hasInstagram && !contact.instagram_url) {
-      return false;
-    }
-
-    if (filters.hasLinkedin && !contact.linkedin_url) {
-      return false;
-    }
-
-    if (filters.hasEmail && !contact.email) {
-      return false;
-    }
-
-    if (filters.unassigned && contact.assigned_to) {
-      return false;
-    }
-
-    if (filters.assignedToMe && filters.userId && contact.assigned_to !== filters.userId) {
-      return false;
-    }
-
-    if (filters.assignedToOthers && filters.userId && (!contact.assigned_to || contact.assigned_to === filters.userId)) {
-      return false;
-    }
-
-    return true;
+  const wordConditions = words.map((word) => {
+    const ors = searchableFields
+      .map((f) => `${f}.ilike.*${encodeURIComponent(escapeLike(word))}*`)
+      .join(',');
+    return `or(${ors})`;
   });
+
+  if (wordConditions.length === 1) {
+    return `&or=(${wordConditions[0].slice(3, -1)})`;
+  }
+  return `&and=(${wordConditions.join(',')})`;
 }
 
-function applySort(contacts: Contact[], sort: ContactSort): Contact[] {
-  const multiplier = sort.direction === 'asc' ? 1 : -1;
+function buildFilters(filters: ContactsFilters): string {
+  const params: string[] = [];
 
-  return [...contacts].sort((a, b) => {
-    const left = (a[sort.field] ?? '').toString().toLowerCase();
-    const right = (b[sort.field] ?? '').toString().toLowerCase();
+  if (filters.query) {
+    params.push(buildSearchFilter(filters.query).replace(/^&/, ''));
+  }
 
-    if (left < right) {
-      return -1 * multiplier;
+  if (filters.country && filters.country !== 'all') {
+    params.push(`country=eq.${encodeURIComponent(filters.country)}`);
+  }
+
+  if (filters.status && filters.status !== 'all') {
+    params.push(`status=eq.${filters.status}`);
+  }
+
+  if (filters.reviewStatus && filters.reviewStatus !== 'all') {
+    params.push(`review_status=eq.${filters.reviewStatus}`);
+  }
+
+  if (filters.nextAction && filters.nextAction !== 'all') {
+    params.push(`next_action=eq.${filters.nextAction}`);
+    if (filters.nextAction === 'pronto_da_contattare') {
+      params.push(`or=(instagram_url.not.is.null,linkedin_url.not.is.null)`);
     }
+  }
 
-    if (left > right) {
-      return 1 * multiplier;
-    }
+  if (filters.approved === true) {
+    params.push('approval=eq.true');
+  } else if (filters.approved === false) {
+    params.push('approval=eq.false');
+  }
 
-    return 0;
-  });
+  if (filters.contacted === true) {
+    params.push('contacted=eq.true');
+  } else if (filters.contacted === false) {
+    params.push('contacted=eq.false');
+  }
+
+  if (filters.hasInstagram) {
+    params.push('instagram_url=not.is.null');
+  }
+
+  if (filters.hasLinkedin) {
+    params.push('linkedin_url=not.is.null');
+  }
+
+  if (filters.hasEmail) {
+    params.push('email=not.is.null');
+  }
+
+  if (filters.unassigned) {
+    params.push('assigned_to=is.null');
+  }
+
+  if (filters.assignedToMe && filters.userId) {
+    params.push(`assigned_to=eq.${encodeURIComponent(filters.userId)}`);
+  }
+
+  if (filters.assignedToOthers && filters.userId) {
+    params.push(`and=(assigned_to.not.eq.${encodeURIComponent(filters.userId)},assigned_to.not.is.null)`);
+  }
+
+  if (filters.source && filters.source !== 'all') {
+    params.push(`contact_sources.source=eq.${encodeURIComponent(filters.source)}`);
+  }
+
+  return params.length ? `&${params.join('&')}` : '';
 }
 
 export async function fetchContacts(
@@ -136,77 +123,27 @@ export async function fetchContacts(
   sort: ContactSort,
   signal?: AbortSignal,
 ): Promise<ContactsResponse> {
-  const sourceFilter = filters.source && filters.source !== 'all' ? filters.source : null;
-  // Build multi-word AND-of-ORs: each word must match at least one field
-  let queryFilter = '';
-  if (filters.query) {
-    const words = filters.query.split(/\s+/).filter(Boolean);
-    const searchableFields = [
-      'full_name',
-      'first_name',
-      'last_name',
-      'email',
-      'instagram_url',
-      'linkedin_url',
-      'employer',
-      'title',
-      'occupation',
-      'city',
-      'country',
-      'notes',
-    ];
-    const wordConditions = words.map((word) => {
-      const ors = searchableFields
-        .map((f) => `${f}.ilike.*${encodeURIComponent(escapeLike(word))}*`)
-        .join(',');
-      return `or=(${ors})`;
-    });
-    queryFilter = wordConditions.length === 1
-      ? `&${wordConditions[0]}`
-      : `&and=(${wordConditions.join(',')})`;
-  }
-
-  const countryFilter = filters.country && filters.country !== 'all' ? `&country=eq.${encodeURIComponent(filters.country)}` : '';
-  const statusFilter = filters.status && filters.status !== 'all' ? `&status=eq.${filters.status}` : '';
-
-  // Loop to fetch all rows in chunks of 1000 because of Supabase max_rows limit
-  let allRows: Contact[] = [];
-  let offsetFetch = 0;
-  const CHUNK_SIZE = 1000;
-  let hasMore = true;
-
-  while (hasMore) {
-    const chunk = await sbFetch<Contact[]>(
-      `/rest/v1/contacts?select=*${queryFilter}${countryFilter}${statusFilter}&order=${sort.field}.${sort.direction}&limit=${CHUNK_SIZE}&offset=${offsetFetch}`,
-      { signal },
-    );
-    
-    allRows = [...allRows, ...chunk];
-    offsetFetch += CHUNK_SIZE;
-    
-    if (chunk.length < CHUNK_SIZE || allRows.length >= 20000) {
-      hasMore = false;
-    }
-  }
-
-  let filtered = applyFilters(allRows, filters);
-  if (sourceFilter) {
-    // Also fetch sources in chunks if necessary (for simplicity, we use a large limit here or chunking if it fails)
-    const sourceRows = await sbFetch<Array<{ contact_id: string }>>(
-      `/rest/v1/contact_sources?select=contact_id&source=eq.${sourceFilter}&limit=10000`,
-    );
-    const allowedIds = new Set(sourceRows.map((row) => row.contact_id));
-    filtered = filtered.filter((row) => allowedIds.has(row.id));
-  }
-
-  const sorted = applySort(filtered, sort);
-
+  const filterParams = buildFilters(filters);
   const offset = (pagination.page - 1) * pagination.pageSize;
-  const pageRows = sorted.slice(offset, offset + pagination.pageSize);
+  const order = `order=${sort.field}.${sort.direction}`;
+
+  // Fetch paginated data
+  const rows = await sbFetch<Contact[]>(
+    `/rest/v1/contacts?select=*${filterParams}&${order}&limit=${pagination.pageSize}&offset=${offset}`,
+    { signal },
+  );
+
+  // Fetch total count with same filters
+  const countResult = await sbFetch<Array<{ count: number }>>(
+    `/rest/v1/contacts?select=count()${filterParams}`,
+    { signal },
+  );
+
+  const total = Number(countResult[0]?.count ?? 0);
 
   return {
-    rows: pageRows,
-    total: sorted.length,
+    rows,
+    total,
   };
 }
 

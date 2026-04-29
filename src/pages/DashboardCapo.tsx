@@ -60,7 +60,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -77,7 +76,6 @@ import {
   Search,
   Trash2,
   Users,
-  X,
 } from 'lucide-react';
 
 const PAGE_SIZE = 10;
@@ -123,11 +121,12 @@ export default function DashboardSK() {
   const [kpi, setKpi] = useState<DashboardKpi>(DEFAULT_KPI);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [filters, setFilters] = useState<ContactsFilters>({
     source: 'all',
     status: 'all',
     reviewStatus: 'all',
-    nextAction: 'all',
+    nextAction: 'pronto_da_contattare',
   });
   const [sort, setSort] = useState<ContactSort>({ field: 'full_name', direction: 'asc' });
   const [page, setPage] = useState(1);
@@ -203,6 +202,7 @@ export default function DashboardSK() {
         setError((err as Error).message || 'Errore caricamento contatti');
       } finally {
         setLoading(false);
+        setInitialLoadDone(true);
       }
     },
     [filters, page, selectedContactId, sort],
@@ -309,7 +309,7 @@ export default function DashboardSK() {
       source: 'all',
       status: 'all',
       reviewStatus: 'all',
-      nextAction: 'all',
+      nextAction: 'pronto_da_contattare',
     });
     setSearchInput('');
     setPage(1);
@@ -787,7 +787,7 @@ export default function DashboardSK() {
                     </TableCell>
                   </TableRow>
                 )}
-                {!loading && !contacts.length && (
+                {!loading && !contacts.length && initialLoadDone && (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                       Nessun contatto trovato.
