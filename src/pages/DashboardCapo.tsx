@@ -7,7 +7,6 @@ import {
   fetchContacts,
   fetchContactSources,
   fetchCountries,
-  fetchCities,
   fetchDashboardKpi,
   updateContact,
 } from '@/lib/contactsService';
@@ -96,7 +95,7 @@ function statusBadgeClass(status: string): string {
     case 'in_progress':
       return 'bg-amber-100 text-amber-700 border-amber-200';
     case 'reviewed':
-      return 'bg-purple-100 text-purple-700 border-purple-200';
+      return 'bg-[#703E69]/15 text-[#703E69] border-[#703E69]/25';
     default:
       return 'bg-muted text-muted-foreground border-transparent';
   }
@@ -139,8 +138,6 @@ export default function DashboardSK() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSaving, setBulkSaving] = useState(false);
   const [allCountries, setAllCountries] = useState<string[]>([]);
-  const [allCities, setAllCities] = useState<string[]>([]);
-  const [citySearch, setCitySearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const debouncedQuery = useDebounce(searchInput, 300);
 
@@ -234,7 +231,6 @@ export default function DashboardSK() {
 
   useEffect(() => {
     void fetchCountries().then(setAllCountries).catch(() => {/* silent */});
-    void fetchCities().then(setAllCities).catch(() => {/* silent */});
   }, []);
 
   useEffect(() => {
@@ -307,7 +303,6 @@ export default function DashboardSK() {
       nextAction: 'pronto_da_contattare',
     });
     setSearchInput('');
-    setCitySearch('');
     setPage(1);
     setSelectedIds(new Set());
   };
@@ -618,49 +613,22 @@ export default function DashboardSK() {
                 <SelectItem value="guildsomm">GuildSomm</SelectItem>
               </SelectContent>
             </Select>
-            <Select
-              value={filters.country ?? 'all'}
-              onValueChange={(v) => handleFilterChange({ country: v === 'all' ? undefined : v })}
-            >
-              <SelectTrigger className="w-[160px] h-9 bg-background">
-                <SelectValue placeholder="Paese" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutti i paesi</SelectItem>
-                {allCountries.map((c) => (
-                  <SelectItem key={c} value={c ?? ''}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <div className="relative">
               <Input
                 type="text"
-                placeholder="Città..."
-                value={citySearch}
+                placeholder="Paese..."
+                value={filters.country ?? ''}
                 onChange={(e) => {
-                  setCitySearch(e.target.value);
-                  if (!e.target.value) {
-                    handleFilterChange({ city: undefined });
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleFilterChange({ city: citySearch || undefined });
-                  }
-                }}
-                onBlur={() => {
-                  handleFilterChange({ city: citySearch || undefined });
+                  const val = e.target.value;
+                  handleFilterChange({ country: val || undefined });
                 }}
                 className="w-[180px] h-9 bg-background text-sm"
-                list="city-options"
+                list="country-options"
               />
-              <datalist id="city-options">
-                {allCities
-                  .filter((c) => c.toLowerCase().includes(citySearch.toLowerCase()))
-                  .slice(0, 20)
-                  .map((c) => (
-                    <option key={c} value={c} />
-                  ))}
+              <datalist id="country-options">
+                {allCountries.map((c) => (
+                  <option key={c} value={c} />
+                ))}
               </datalist>
             </div>
           </div>
