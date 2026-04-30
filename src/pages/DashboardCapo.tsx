@@ -7,6 +7,7 @@ import {
   fetchContacts,
   fetchContactSources,
   fetchCountries,
+  fetchCities,
   fetchDashboardKpi,
   updateContact,
 } from '@/lib/contactsService';
@@ -95,7 +96,7 @@ function statusBadgeClass(status: string): string {
     case 'in_progress':
       return 'bg-amber-100 text-amber-700 border-amber-200';
     case 'reviewed':
-      return 'bg-blue-100 text-blue-700 border-blue-200';
+      return 'bg-purple-100 text-purple-700 border-purple-200';
     default:
       return 'bg-muted text-muted-foreground border-transparent';
   }
@@ -138,6 +139,8 @@ export default function DashboardSK() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSaving, setBulkSaving] = useState(false);
   const [allCountries, setAllCountries] = useState<string[]>([]);
+  const [allCities, setAllCities] = useState<string[]>([]);
+  const [citySearch, setCitySearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const debouncedQuery = useDebounce(searchInput, 300);
 
@@ -155,6 +158,7 @@ export default function DashboardSK() {
       filters.reviewStatus !== 'all' ||
       filters.nextAction !== 'all' ||
       filters.country !== undefined ||
+      filters.city !== undefined ||
       filters.query !== undefined ||
       Boolean(filters.hasInstagram) ||
       Boolean(filters.hasLinkedin) ||
@@ -230,6 +234,7 @@ export default function DashboardSK() {
 
   useEffect(() => {
     void fetchCountries().then(setAllCountries).catch(() => {/* silent */});
+    void fetchCities().then(setAllCities).catch(() => {/* silent */});
   }, []);
 
   useEffect(() => {
@@ -294,16 +299,6 @@ export default function DashboardSK() {
     navigate('/login');
   };
 
-  function getSocialHandle(url: string | null): string | null {
-    if (!url) return null;
-    try {
-      const u = new URL(url);
-      return u.pathname.replace(/^\//, '').split('/')[0] || null;
-    } catch {
-      return null;
-    }
-  }
-
   const handleResetFilters = () => {
     setFilters({
       source: 'all',
@@ -312,6 +307,7 @@ export default function DashboardSK() {
       nextAction: 'pronto_da_contattare',
     });
     setSearchInput('');
+    setCitySearch('');
     setPage(1);
     setSelectedIds(new Set());
   };
@@ -636,6 +632,37 @@ export default function DashboardSK() {
                 ))}
               </SelectContent>
             </Select>
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Città..."
+                value={citySearch}
+                onChange={(e) => {
+                  setCitySearch(e.target.value);
+                  if (!e.target.value) {
+                    handleFilterChange({ city: undefined });
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleFilterChange({ city: citySearch || undefined });
+                  }
+                }}
+                onBlur={() => {
+                  handleFilterChange({ city: citySearch || undefined });
+                }}
+                className="w-[180px] h-9 bg-background text-sm"
+                list="city-options"
+              />
+              <datalist id="city-options">
+                {allCities
+                  .filter((c) => c.toLowerCase().includes(citySearch.toLowerCase()))
+                  .slice(0, 20)
+                  .map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+              </datalist>
+            </div>
           </div>
 
           <div className="p-4 flex flex-wrap items-center gap-4 bg-muted/30">
@@ -817,14 +844,8 @@ export default function DashboardSK() {
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          {contact.instagram_url && (
-                            <span className="flex items-center gap-1"><Instagram className="h-3 w-3 text-pink-600" />@{getSocialHandle(contact.instagram_url) || 'IG'}</span>
-                          )}
-                          {contact.linkedin_url && (
-                            <span className="flex items-center gap-1"><Linkedin className="h-3 w-3 text-blue-700" />{getSocialHandle(contact.linkedin_url) || 'LI'}</span>
-                          )}
-                          {!contact.instagram_url && !contact.linkedin_url && <span className="italic">Nessun social</span>}
+                        <div className="text-xs text-muted-foreground">
+                          {contact.occupation || contact.title || <span className="italic">Nessuna occupazione</span>}
                         </div>
                       </div>
                     </TableCell>

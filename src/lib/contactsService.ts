@@ -59,6 +59,10 @@ function buildFilters(filters: ContactsFilters): string {
     params.push(`country=eq.${encodeURIComponent(filters.country)}`);
   }
 
+  if (filters.city && filters.city !== 'all') {
+    params.push(`city=eq.${encodeURIComponent(filters.city)}`);
+  }
+
   if (filters.status && filters.status !== 'all') {
     params.push(`status=eq.${filters.status}`);
   }
