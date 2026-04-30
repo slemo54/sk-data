@@ -56,6 +56,7 @@ export interface ContactSource {
 export interface ContactsFilters {
   query?: string;
   country?: string;
+  city?: string;
   source?: ContactSourceName | 'all';
   hasInstagram?: boolean;
   hasLinkedin?: boolean;

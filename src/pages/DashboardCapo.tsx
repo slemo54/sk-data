@@ -155,7 +155,6 @@ export default function DashboardSK() {
       filters.reviewStatus !== 'all' ||
       filters.nextAction !== 'all' ||
       filters.country !== undefined ||
-      filters.city !== undefined ||
       filters.query !== undefined ||
       Boolean(filters.hasInstagram) ||
       Boolean(filters.hasLinkedin) ||
