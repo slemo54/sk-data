@@ -91,11 +91,11 @@ const DEFAULT_KPI: DashboardKpi = {
 function statusBadgeClass(status: string): string {
   switch (status) {
     case 'todo':
-      return 'bg-gray-100 text-gray-700 border-gray-200';
+      return 'bg-[#703E69]/5 text-[#703E69]/50 border-[#703E69]/10';
     case 'in_progress':
-      return 'bg-amber-100 text-amber-700 border-amber-200';
+      return 'bg-[#703E69]/10 text-[#703E69]/75 border-[#703E69]/20';
     case 'reviewed':
-      return 'bg-[#703E69]/15 text-[#703E69] border-[#703E69]/25';
+      return 'bg-[#703E69]/20 text-[#703E69] border-[#703E69]/30';
     default:
       return 'bg-muted text-muted-foreground border-transparent';
   }
