@@ -801,6 +801,17 @@ export default function OperatorePage() {
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs gap-1"
+                            onClick={() => {
+                              window.open(`https://www.google.com/search?q=${encodeURIComponent(contact.full_name)}`, '_blank', 'noopener,noreferrer');
+                            }}
+                          >
+                            <Search className="h-3 w-3" />
+                            Inizia ricerca
+                          </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isLocked} onClick={() => {
                             if (contact.instagram_url) window.open(contact.instagram_url, '_blank', 'noopener,noreferrer');
                           }}>
