@@ -807,7 +807,8 @@ export default function OperatorePage() {
                             size="sm"
                             className="h-8 text-xs gap-1"
                             onClick={() => {
-                              window.open(`https://www.google.com/search?q=${encodeURIComponent(contact.full_name)}`, '_blank', 'noopener,noreferrer');
+                              const query = [contact.full_name, contact.employer, contact.city, contact.country].filter(Boolean).join(' ');
+                            window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank', 'noopener,noreferrer');
                             }}
                           >
                             <Search className="h-3 w-3" />
