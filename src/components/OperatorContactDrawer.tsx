@@ -83,6 +83,7 @@ export default function OperatorContactDrawer({
   );
 
   const canReadyToContact = Boolean(
+    contact.instagram_url || contact.linkedin_url || contact.email ||
     draft.instagram_url || draft.linkedin_url || draft.email,
   );
 

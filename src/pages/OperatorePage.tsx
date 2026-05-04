@@ -247,6 +247,7 @@ export default function OperatorePage() {
         status: 'reviewed',
       });
       toast.success('Segnalato come Pronto a contattare');
+      setSheetOpen(false);
       await refreshContacts();
       await refreshKpi();
     } catch (err) {
