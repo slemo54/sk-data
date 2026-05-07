@@ -70,6 +70,7 @@ export interface ContactsFilters {
   assignedToMe?: boolean;
   unassigned?: boolean;
   assignedToOthers?: boolean;
+  notReady?: boolean;
   userId?: string;
 }
 

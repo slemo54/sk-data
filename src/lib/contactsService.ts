@@ -119,6 +119,10 @@ function buildFilters(filters: ContactsFilters): string {
     params.push(`and=(assigned_to.not.eq.${encodeURIComponent(filters.userId)},assigned_to.not.is.null)`);
   }
 
+  if (filters.notReady) {
+    params.push(`not.and=(next_action.eq.pronto_da_contattare,assigned_to.is.null)`);
+  }
+
   return params.length ? `&${params.join('&')}` : '';
 }
 

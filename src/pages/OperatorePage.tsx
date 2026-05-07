@@ -620,6 +620,10 @@ export default function OperatorePage() {
                 <span className="text-muted-foreground">Non assegnati</span>
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox checked={Boolean(filters.notReady)} onCheckedChange={(v) => handleFilterChange({ notReady: Boolean(v) })} />
+                <span className="text-muted-foreground">Not ready</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox checked={Boolean(filters.assignedToOthers)} onCheckedChange={(v) => handleFilterChange({ assignedToOthers: Boolean(v), userId: userEmail })} />
                 <span className="text-muted-foreground">Assegnati ad altri</span>
               </label>
