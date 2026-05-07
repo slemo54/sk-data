@@ -6,7 +6,6 @@ import {
   deleteContact,
   fetchContacts,
   fetchContactSources,
-  fetchCountries,
   fetchDashboardKpi,
   updateContact,
 } from '@/lib/contactsService';
@@ -137,7 +136,6 @@ export default function DashboardSK() {
   const [lastRefreshed, setLastRefreshed] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSaving, setBulkSaving] = useState(false);
-  const [allCountries, setAllCountries] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const debouncedQuery = useDebounce(searchInput, 300);
 
@@ -154,6 +152,7 @@ export default function DashboardSK() {
       filters.status !== 'all' ||
       filters.reviewStatus !== 'all' ||
       filters.nextAction !== 'all' ||
+      filters.location !== undefined ||
       filters.country !== undefined ||
       filters.query !== undefined ||
       Boolean(filters.hasInstagram) ||
@@ -227,10 +226,6 @@ export default function DashboardSK() {
       .then((sources) => setSelectedSources(sources))
       .catch((err) => setError((err as Error).message || 'Errore provenance'));
   }, [selectedContactId]);
-
-  useEffect(() => {
-    void fetchCountries().then(setAllCountries).catch(() => {/* silent */});
-  }, []);
 
   useEffect(() => {
     handleFilterChange({ query: debouncedQuery || undefined });
@@ -612,24 +607,13 @@ export default function DashboardSK() {
                 <SelectItem value="guildsomm">GuildSomm</SelectItem>
               </SelectContent>
             </Select>
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="Paese..."
-                value={filters.country ?? ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  handleFilterChange({ country: val || undefined });
-                }}
-                className="w-[180px] h-9 bg-background text-sm"
-                list="country-options"
-              />
-              <datalist id="country-options">
-                {allCountries.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
-            </div>
+            <Input
+              type="text"
+              placeholder="Luogo (città o paese)..."
+              value={filters.location ?? ''}
+              onChange={(e) => handleFilterChange({ location: e.target.value || undefined })}
+              className="w-[220px] h-9 bg-background text-sm"
+            />
           </div>
 
           <div className="p-4 flex flex-wrap items-center gap-4 bg-muted/30">

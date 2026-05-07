@@ -6,13 +6,11 @@ import OperatorContactDrawer from '@/components/OperatorContactDrawer';
 import OperatorCreateContactDrawer from '@/components/OperatorCreateContactDrawer';
 import {
   // addNote,
-  claimContacts,
   claimSingleContact,
   createContact,
   deleteContact,
   fetchContacts,
   fetchContactSources,
-  fetchCountries,
   fetchCities,
   fetchDashboardKpi,
   releaseContact,
@@ -118,7 +116,6 @@ export default function OperatorePage() {
   const [lastRefreshed, setLastRefreshed] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSaving, setBulkSaving] = useState(false);
-  const [allCountries, setAllCountries] = useState<string[]>([]);
   const [allCities, setAllCities] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const debouncedQuery = useDebounce(searchInput, 300);
@@ -196,7 +193,6 @@ export default function OperatorePage() {
   }, [selectedContactId]);
 
   useEffect(() => {
-    void fetchCountries().then(setAllCountries).catch(() => { /* silent */ });
     void fetchCities().then(setAllCities).catch(() => { /* silent */ });
   }, []);
 
@@ -225,12 +221,32 @@ export default function OperatorePage() {
       return;
     }
     try {
-      const claimed = await claimContacts(claimCount, userEmail);
-      if (claimed.length === 0) {
-        toast.info('Nessun contatto disponibile per il claim.');
+      // Recupera tutti i contatti filtrati (senza paginazione) per trovare quelli non assegnati
+      const allFiltered = await fetchContacts(
+        { ...filters, unassigned: true },
+        { page: 1, pageSize: 10000 },
+        sort,
+      );
+      const unassignedFiltered = allFiltered.rows.slice(0, claimCount);
+      if (unassignedFiltered.length === 0) {
+        toast.info('Nessun contatto disponibile per il claim con i filtri attuali.');
         return;
       }
-      toast.success(`${claimed.length} contatti assegnati a te`);
+      // Claima uno per uno
+      let claimedCount = 0;
+      for (const contact of unassignedFiltered) {
+        try {
+          await claimSingleContact(contact.id, userEmail);
+          claimedCount++;
+        } catch {
+          // Contatto già preso da qualcun altro, ignora
+        }
+      }
+      if (claimedCount === 0) {
+        toast.info('Nessun contatto disponibile per il claim con i filtri attuali.');
+        return;
+      }
+      toast.success(`${claimedCount} contatti assegnati a te dai risultati filtrati`);
       handleFilterChange({ assignedToMe: true, userId: userEmail });
       await refreshContacts();
       await refreshKpi();
@@ -564,20 +580,13 @@ export default function OperatorePage() {
                 <SelectItem value="unseen">Unseen</SelectItem>
               </SelectContent>
             </Select>
-            <Select
-              value={filters.country ?? 'all'}
-              onValueChange={(v) => handleFilterChange({ country: v === 'all' ? undefined : v })}
-            >
-              <SelectTrigger className="w-[160px] h-9 bg-background">
-                <SelectValue placeholder="Paese" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutti i paesi</SelectItem>
-                {allCountries.map((c) => (
-                  <SelectItem key={c} value={c ?? ''}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              type="text"
+              placeholder="Luogo (città o paese)..."
+              value={filters.location ?? ''}
+              onChange={(e) => handleFilterChange({ location: e.target.value || undefined })}
+              className="w-[220px] h-9 bg-background text-sm"
+            />
           </div>
 
           <div className="p-4 flex flex-wrap items-center justify-between gap-3 bg-muted/30">

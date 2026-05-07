@@ -63,6 +63,11 @@ function buildFilters(filters: ContactsFilters): string {
     params.push(`city=eq.${encodeURIComponent(filters.city)}`);
   }
 
+  if (filters.location) {
+    const loc = encodeURIComponent(escapeLike(filters.location));
+    params.push(`or=(city.ilike.*${loc}*,country.ilike.*${loc}*)`);
+  }
+
   if (filters.status && filters.status !== 'all') {
     params.push(`status=eq.${filters.status}`);
   }
