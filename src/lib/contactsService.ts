@@ -120,7 +120,7 @@ function buildFilters(filters: ContactsFilters): string {
   }
 
   if (filters.notReady) {
-    params.push(`not.and=(next_action.eq.pronto_da_contattare,assigned_to.is.null)`);
+    params.push(`or=(next_action.neq.pronto_da_contattare,next_action.is.null)`);
   }
 
   return params.length ? `&${params.join('&')}` : '';
