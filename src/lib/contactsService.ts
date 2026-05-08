@@ -322,3 +322,49 @@ export async function fetchCities(): Promise<string[]> {
   });
   return [...set].sort();
 }
+
+// Operator approval
+export interface PendingOperator {
+  id: string;
+  email: string;
+  auth_user_id: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at: string;
+}
+
+export async function createPendingOperator(email: string): Promise<void> {
+  await sbFetch('/rest/v1/pending_operators', {
+    method: 'POST',
+    body: JSON.stringify({ email, status: 'pending' }),
+  });
+}
+
+export async function checkOperatorApproved(email: string): Promise<boolean> {
+  try {
+    const rows = await sbFetch<Array<PendingOperator>>(
+      `/rest/v1/pending_operators?select=*&email=eq.${encodeURIComponent(email)}&status=eq.approved`,
+    );
+    return rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+export async function fetchPendingOperators(): Promise<PendingOperator[]> {
+  return sbFetch<PendingOperator[]>('/rest/v1/pending_operators?select=*&status=eq.pending&order=created_at.desc');
+}
+
+export async function approveOperator(id: string): Promise<void> {
+  await sbFetch(`/rest/v1/pending_operators?id=eq.${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'approved' }),
+  });
+}
+
+export async function rejectOperator(id: string): Promise<void> {
+  await sbFetch(`/rest/v1/pending_operators?id=eq.${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'rejected' }),
+  });
+}

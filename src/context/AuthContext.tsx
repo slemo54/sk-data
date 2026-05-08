@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, setAccessToken } from '@/lib/auth';
+import { createPendingOperator, checkOperatorApproved } from '@/lib/contactsService';
 import type { User } from '@supabase/supabase-js';
 
 export type UserRole = 'admin' | 'operator' | null;
@@ -56,15 +57,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+
+    // Verifica approvazione per operatori non-admin
+    if (email !== 'kim@mammajumboshrimp.com') {
+      const approved = await checkOperatorApproved(email);
+      if (!approved) {
+        await supabase.auth.signOut();
+        throw new Error('Il tuo account è in attesa di approvazione da parte dell\'amministratore.');
+      }
+    }
   };
 
   const signUp = async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { role: 'operator' } },
     });
     if (error) throw error;
+
+    // Crea richiesta di approvazione
+    try {
+      await createPendingOperator(email);
+    } catch {
+      // Ignora errore se l'email è già presente
+    }
   };
 
   const signOut = async () => {
