@@ -669,6 +669,7 @@ export default function OperatorePage() {
           <span className="flex items-center gap-1"><Instagram className="h-4 w-4 text-pink-600" /> {socialCounts.instagram}</span>
           <span className="flex items-center gap-1"><Linkedin className="h-4 w-4 text-blue-700" /> {socialCounts.linkedin}</span>
           <span className="flex items-center gap-1"><Mail className="h-4 w-4 text-emerald-600" /> {socialCounts.email}</span>
+          <span className="font-medium text-foreground">Tot: {total.toLocaleString()}</span>
         </div>
 
         {/* Table */}
