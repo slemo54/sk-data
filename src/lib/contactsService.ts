@@ -341,13 +341,24 @@ export async function createPendingOperator(email: string): Promise<void> {
 }
 
 export async function checkOperatorApproved(email: string): Promise<boolean> {
+  // Admin sempre approvato
+  if (email === 'kim@mammajumboshrimp.com') return true;
+
   try {
+    // Cerca qualsiasi record per questa email
     const rows = await sbFetch<Array<PendingOperator>>(
-      `/rest/v1/pending_operators?select=*&email=eq.${encodeURIComponent(email)}&status=eq.approved`,
+      `/rest/v1/pending_operators?select=*&email=eq.${encodeURIComponent(email)}`,
     );
-    return rows.length > 0;
+
+    if (rows.length === 0) {
+      // Nessun record = utente esistente prima della modifica (retrocompatibilità)
+      return true;
+    }
+
+    // Se c'è un record, deve essere 'approved'
+    return rows[0].status === 'approved';
   } catch {
-    return false;
+    return true; // In caso di errore, permetti accesso per non bloccare utenti esistenti
   }
 }
 
