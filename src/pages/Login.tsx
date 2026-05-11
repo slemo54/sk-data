@@ -58,7 +58,7 @@ export default function Login() {
       } else {
         await signUp(email, password);
         setMode('login');
-        setError('Registrazione completata. Controlla la tua email per la conferma, poi effettua il login.');
+        setError('Registrazione completata. Il tuo account è in attesa di approvazione dall\'amministratore. Riceverai un\'email quando sarà approvato.');
         setLoading(false);
         return;
       }

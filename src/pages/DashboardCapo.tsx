@@ -454,6 +454,53 @@ export default function DashboardSK() {
       </header>
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full p-6 space-y-6">
+        {/* Banner operatori in attesa */}
+        {pendingOperators.length > 0 && (
+          <div className="rounded-xl border bg-amber-50 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-amber-600" />
+                <span className="font-semibold text-amber-800">
+                  Operatori in attesa ({pendingOperators.length})
+                </span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {pendingOperators.map((op) => (
+                <div key={op.id} className="flex items-center justify-between gap-4 bg-white rounded-lg p-3 border border-amber-200">
+                  <span className="text-sm font-medium">{op.email}</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                      onClick={async () => {
+                        await approveOperator(op.id);
+                        toast.success(`${op.email} approvato`);
+                        void refreshPendingOperators();
+                      }}
+                    >
+                      Approva
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={async () => {
+                        await rejectOperator(op.id);
+                        toast.success(`${op.email} rifiutato`);
+                        void refreshPendingOperators();
+                      }}
+                    >
+                      Rifiuta
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* KPI */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {/* 1. Ready to Contact */}
@@ -545,54 +592,7 @@ export default function DashboardSK() {
             </div>
           </button>
 
-          {/* 5. Operatori in attesa */}
-          {pendingOperators.length > 0 && (
-            <div className="rounded-xl border bg-amber-50 p-5 shadow-sm flex items-center gap-4">
-              <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-                <Users className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Operatori in attesa
-                </span>
-                <div className="mt-1 space-y-1">
-                  {pendingOperators.map((op) => (
-                    <div key={op.id} className="flex items-center justify-between gap-2 text-sm">
-                      <span className="truncate">{op.email}</span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs"
-                          onClick={async () => {
-                            await approveOperator(op.id);
-                            toast.success(`${op.email} approvato`);
-                            void refreshPendingOperators();
-                          }}
-                        >
-                          Approva
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-xs text-red-600 hover:text-red-700"
-                          onClick={async () => {
-                            await rejectOperator(op.id);
-                            toast.success(`${op.email} rifiutato`);
-                            void refreshPendingOperators();
-                          }}
-                        >
-                          Rifiuta
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 6. Pending Review */}
+          {/* 5. Pending Review */}
           <button
             type="button"
             aria-pressed={filters.reviewStatus === 'unseen'}

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, setAccessToken } from '@/lib/auth';
-import { createPendingOperator, checkOperatorApproved } from '@/lib/contactsService';
+import { createPendingOperator, checkOperatorApproved as checkOperatorApproval } from '@/lib/contactsService';
 import type { User } from '@supabase/supabase-js';
 
 export type UserRole = 'admin' | 'operator' | null;
@@ -9,6 +9,7 @@ interface AuthContextValue {
   user: User | null;
   role: UserRole;
   loading: boolean;
+  isApproved: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -31,22 +32,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
+  const [isApproved, setIsApproved] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       const session = data.session;
       setAccessToken(session?.access_token ?? null);
       const u = session?.user ?? null;
       setUser(u);
       setRole(extractRole(u));
+      if (u?.email) {
+        const approved = await checkOperatorApproval(u.email);
+        setIsApproved(approved);
+      }
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setAccessToken(session?.access_token ?? null);
       const u = session?.user ?? null;
       setUser(u);
       setRole(extractRole(u));
+      if (u?.email) {
+        const approved = await checkOperatorApproval(u.email);
+        setIsApproved(approved);
+      }
     });
 
     return () => {
@@ -59,12 +69,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
 
     // Verifica approvazione per operatori non-admin
-    if (email !== 'kim@mammajumboshrimp.com') {
-      const approved = await checkOperatorApproved(email);
-      if (!approved) {
-        await supabase.auth.signOut();
-        throw new Error('Il tuo account è in attesa di approvazione da parte dell\'amministratore.');
-      }
+    const approved = await checkOperatorApproval(email);
+    setIsApproved(approved);
+    if (!approved) {
+      // Non sloggare, ma mostrare banner in attesa
+      return;
     }
   };
 
@@ -88,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, role, loading, isApproved, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
