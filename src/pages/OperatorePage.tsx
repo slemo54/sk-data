@@ -581,6 +581,20 @@ export default function OperatorePage() {
                 <SelectItem value="unseen">Unseen</SelectItem>
               </SelectContent>
             </Select>
+            <Select
+              value={filters.source ?? 'all'}
+              onValueChange={(v) => handleFilterChange({ source: v as 'all' | 'wine_awards' | 'guildsomm' | 'linkedin_sk' })}
+            >
+              <SelectTrigger className="w-[160px] h-9 bg-background">
+                <SelectValue placeholder="Fonte" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutte le fonti</SelectItem>
+                <SelectItem value="wine_awards">Wine Awards</SelectItem>
+                <SelectItem value="guildsomm">GuildSomm</SelectItem>
+                <SelectItem value="linkedin_sk">LinkedIn SK</SelectItem>
+              </SelectContent>
+            </Select>
             <Input
               type="text"
               placeholder="Luogo (città o paese)..."
@@ -755,9 +769,12 @@ export default function OperatorePage() {
                           <span className="inline-flex items-center gap-2">
                             <span className="font-semibold text-sm">{contact.full_name}</span>
                             {hasLinkedinSkSource(contact) && (
-                              <Badge variant="outline" className="h-5 rounded-full border-[#703E69]/20 bg-[#703E69]/10 px-1.5 text-[10px] font-bold text-[#703E69]" title="Da LinkedIn SK">
-                                SK
-                              </Badge>
+                              <img
+                                src="./sk-linkedin-source.png"
+                                alt="Da LinkedIn SK"
+                                title="Da LinkedIn SK"
+                                className="h-5 w-5 rounded-full object-contain"
+                              />
                             )}
                           </span>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">

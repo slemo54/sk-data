@@ -860,14 +860,12 @@ export default function DashboardSK() {
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm">{contact.full_name}</span>
                           {hasLinkedinSkSource(contact) && (
-                            <Badge variant="outline" className="h-5 rounded-full border-[#703E69]/20 bg-[#703E69]/10 px-1.5 text-[10px] font-bold text-[#703E69]" title="Da LinkedIn SK">
-                              SK
-                            </Badge>
-                          )}
-                          {contact.notes && (
-                            <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">
-                              Note
-                            </Badge>
+                            <img
+                              src="./sk-linkedin-source.png"
+                              alt="Da LinkedIn SK"
+                              title="Da LinkedIn SK"
+                              className="h-5 w-5 rounded-full object-contain"
+                            />
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground">
