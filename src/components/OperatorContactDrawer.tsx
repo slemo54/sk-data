@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Contact, ContactSource, ContactPatch } from '@/types/contact';
 import { getSourceLabel } from '@/lib/contactSourceDisplay';
+import { buildLocationSuggestions } from '@/lib/locationSuggestions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -78,6 +79,7 @@ export default function OperatorContactDrawer({
     contact.instagram_url || contact.linkedin_url || contact.email ||
     draft.instagram_url || draft.linkedin_url || draft.email,
   );
+  const locationSuggestions = buildLocationSuggestions(cities);
 
   const setField = (field: keyof ContactPatch, value: string) => {
     setDraft((prev) => ({ ...prev, [field]: value }));
@@ -134,15 +136,15 @@ export default function OperatorContactDrawer({
                 <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <Input
                   list="operator-contact-cities"
-                  placeholder="Inserisci luogo..."
+                  placeholder="Città, stato o paese..."
                   value={draft.city ?? ''}
                   onChange={(e) => setField('city', e.target.value)}
                   disabled={isLocked}
                   className="h-8 text-xs"
                 />
                 <datalist id="operator-contact-cities">
-                  {cities.map((city) => (
-                    <option key={city} value={city} />
+                  {locationSuggestions.map((location) => (
+                    <option key={location} value={location} />
                   ))}
                 </datalist>
               </div>
