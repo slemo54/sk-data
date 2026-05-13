@@ -8,7 +8,12 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "import:contacts": "node scripts/import-contacts.mjs"
+    "import:contacts": "node scripts/import-contacts.mjs",
+    "test:linkedin-sk-enrichment": "node scripts/linkedin-sk-enrichment-lib.test.mjs",
+    "export:linkedin-sk-enrichment": "node scripts/export-linkedin-sk-enrichment.mjs",
+    "import:linkedin-sk-enrichment": "node scripts/import-linkedin-sk-enrichment.mjs",
+    "test:linkedin-connections": "node scripts/linkedin-connections-lib.test.mjs",
+    "import:linkedin-connections": "node scripts/import-linkedin-connections.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
