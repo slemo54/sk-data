@@ -10,7 +10,7 @@ export type NextAction =
   | 'da_verificare'
   | 'chiuso';
 
-export type ContactSourceName = 'wine_awards' | 'guildsomm';
+export type ContactSourceName = 'wine_awards' | 'guildsomm' | 'linkedin_sk';
 
 export interface Contact {
   id: string;
@@ -38,6 +38,7 @@ export interface Contact {
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;
+  contact_sources?: Pick<ContactSource, 'source'>[];
 }
 
 export interface ContactSource {

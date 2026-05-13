@@ -18,6 +18,7 @@ import {
   toggleContacted,
   updateContact,
 } from '@/lib/contactsService';
+import { hasLinkedinSkSource } from '@/lib/contactSourceDisplay';
 import { useDebounce } from '@/hooks/use-debounce';
 import type {
   Contact,
@@ -751,7 +752,14 @@ export default function OperatorePage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1 py-1">
-                          <span className="font-semibold text-sm">{contact.full_name}</span>
+                          <span className="inline-flex items-center gap-2">
+                            <span className="font-semibold text-sm">{contact.full_name}</span>
+                            {hasLinkedinSkSource(contact) && (
+                              <Badge variant="outline" className="h-5 rounded-full border-[#703E69]/20 bg-[#703E69]/10 px-1.5 text-[10px] font-bold text-[#703E69]" title="Da LinkedIn SK">
+                                SK
+                              </Badge>
+                            )}
+                          </span>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             {contact.instagram_url && (
                               <span className="flex items-center gap-1"><Instagram className="h-3 w-3 text-pink-600" />@{getSocialHandle(contact.instagram_url) || 'IG'}</span>

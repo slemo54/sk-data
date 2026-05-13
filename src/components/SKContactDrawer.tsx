@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Contact, ContactSource, NextAction } from '@/types/contact';
+import { getSourceLabel } from '@/lib/contactSourceDisplay';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -316,7 +317,7 @@ export default function SKContactDrawer({
               <div className="space-y-2">
                 {sources.map((source) => (
                   <div key={source.id} className="text-sm border rounded-xl p-3 bg-muted/30">
-                    <div className="font-medium capitalize">{source.source.replace('_', ' ')}</div>
+                    <div className="font-medium">{getSourceLabel(source.source)}</div>
                     <div className="text-muted-foreground text-xs mt-0.5">
                       {source.restaurant_name ?? '-'} · {source.award ?? '-'} · {source.wine_role ?? '-'}
                     </div>

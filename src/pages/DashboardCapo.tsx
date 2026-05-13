@@ -12,6 +12,7 @@ import {
   approveOperator,
   rejectOperator,
 } from '@/lib/contactsService';
+import { hasLinkedinSkSource } from '@/lib/contactSourceDisplay';
 import type { PendingOperator } from '@/lib/contactsService';
 import { useDebounce } from '@/hooks/use-debounce';
 import type {
@@ -663,7 +664,7 @@ export default function DashboardSK() {
             </Select>
             <Select
               value={filters.source ?? 'all'}
-              onValueChange={(v) => handleFilterChange({ source: v as 'all' | 'wine_awards' | 'guildsomm' })}
+              onValueChange={(v) => handleFilterChange({ source: v as 'all' | 'wine_awards' | 'guildsomm' | 'linkedin_sk' })}
             >
               <SelectTrigger className="w-[160px] h-9 bg-background">
                 <SelectValue placeholder="Fonte" />
@@ -672,6 +673,7 @@ export default function DashboardSK() {
                 <SelectItem value="all">Tutte le fonti</SelectItem>
                 <SelectItem value="wine_awards">Wine Awards</SelectItem>
                 <SelectItem value="guildsomm">GuildSomm</SelectItem>
+                <SelectItem value="linkedin_sk">LinkedIn SK</SelectItem>
               </SelectContent>
             </Select>
             <Input
@@ -857,6 +859,11 @@ export default function DashboardSK() {
                       <div className="flex flex-col gap-1 py-1">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm">{contact.full_name}</span>
+                          {hasLinkedinSkSource(contact) && (
+                            <Badge variant="outline" className="h-5 rounded-full border-[#703E69]/20 bg-[#703E69]/10 px-1.5 text-[10px] font-bold text-[#703E69]" title="Da LinkedIn SK">
+                              SK
+                            </Badge>
+                          )}
                           {contact.notes && (
                             <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">
                               Note

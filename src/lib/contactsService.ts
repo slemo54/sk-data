@@ -137,7 +137,7 @@ export async function fetchContacts(
   // Per filtro su source usiamo embedded resource con !inner
   const selectClause = hasSourceFilter
     ? '*,contact_sources!inner(source)'
-    : '*';
+    : '*,contact_sources(source)';
 
   const filterParams = buildFilters(filters);
   const sourceFilter = hasSourceFilter

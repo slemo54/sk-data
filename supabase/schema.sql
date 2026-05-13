@@ -48,7 +48,7 @@ alter table public.contacts
 create table if not exists public.contact_sources (
   id uuid primary key default gen_random_uuid(),
   contact_id uuid not null references public.contacts(id) on delete cascade,
-  source text not null check (source in ('wine_awards', 'guildsomm')),
+  source text not null check (source in ('wine_awards', 'guildsomm', 'linkedin_sk')),
   source_key text not null,
   restaurant_name text,
   award text,
@@ -58,6 +58,11 @@ create table if not exists public.contact_sources (
   created_at timestamptz not null default now(),
   unique(source, source_key)
 );
+
+alter table public.contact_sources
+  drop constraint if exists contact_sources_source_check,
+  add constraint contact_sources_source_check
+    check (source in ('wine_awards', 'guildsomm', 'linkedin_sk'));
 
 create table if not exists public.profiles_review_log (
   id bigint generated always as identity primary key,
