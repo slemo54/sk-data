@@ -3,18 +3,8 @@ import type { Contact, ContactSource, ContactPatch } from '@/types/contact';
 import { getSourceLabel } from '@/lib/contactSourceDisplay';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Lock, ExternalLink, MapPin, User, Building2, Briefcase, FileText, Trash2, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Lock, ExternalLink, MapPin, User, Building2, Briefcase, FileText, Trash2 } from 'lucide-react';
 
 interface Props {
   contact: Contact | null;
@@ -46,7 +36,6 @@ export default function OperatorContactDrawer({
   cities = [],
 }: Props) {
   const [draft, setDraft] = useState<ContactPatch>({});
-  const [cityOpen, setCityOpen] = useState(false);
 
   useEffect(() => {
     if (!contact) {
@@ -62,6 +51,7 @@ export default function OperatorContactDrawer({
       employer: contact.employer,
       title: contact.title,
       occupation: contact.occupation,
+      city: contact.city,
       notes: contact.notes,
     });
   }, [contact]);
@@ -80,6 +70,7 @@ export default function OperatorContactDrawer({
     (draft.employer ?? '') !== (contact.employer ?? '') ||
     (draft.title ?? '') !== (contact.title ?? '') ||
     (draft.occupation ?? '') !== (contact.occupation ?? '') ||
+    (draft.city ?? '') !== (contact.city ?? '') ||
     (draft.notes ?? '') !== (contact.notes ?? '')
   );
 
@@ -103,6 +94,7 @@ export default function OperatorContactDrawer({
       employer: draft.employer?.trim() || null,
       title: draft.title?.trim() || null,
       occupation: draft.occupation?.trim() || null,
+      city: draft.city?.trim() || null,
       notes: draft.notes?.trim() || null,
     };
     onSave(patch);
@@ -140,48 +132,19 @@ export default function OperatorContactDrawer({
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <Popover open={cityOpen} onOpenChange={setCityOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={cityOpen}
-                      className="w-full justify-between h-8 text-xs font-normal"
-                      disabled={isLocked}
-                    >
-                      {draft.city || 'Seleziona o digita città...'}
-                      <span className="ml-2 opacity-50">⌄</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Cerca città..." />
-                      <CommandList>
-                        <CommandEmpty>Nessuna città trovata. Scrivi per aggiungere.</CommandEmpty>
-                        <CommandGroup>
-                          {cities.map((city) => (
-                            <CommandItem
-                              key={city}
-                              value={city}
-                              onSelect={() => {
-                                setField('city', city);
-                                setCityOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  draft.city === city ? 'opacity-100' : 'opacity-0',
-                                )}
-                              />
-                              {city}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  list="operator-contact-cities"
+                  placeholder="Inserisci luogo..."
+                  value={draft.city ?? ''}
+                  onChange={(e) => setField('city', e.target.value)}
+                  disabled={isLocked}
+                  className="h-8 text-xs"
+                />
+                <datalist id="operator-contact-cities">
+                  {cities.map((city) => (
+                    <option key={city} value={city} />
+                  ))}
+                </datalist>
               </div>
             </div>
           </div>
