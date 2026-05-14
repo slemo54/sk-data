@@ -30,7 +30,7 @@ assert.deepEqual(
     occupation: 'CEO',
     status: 'reviewed',
     review_status: 'unseen',
-    next_action: 'pronto_da_contattare',
+    next_action: 'da_verificare',
     approval: false,
     contacted: false,
     notes: 'LinkedIn connection export. City/country require enrichment.',

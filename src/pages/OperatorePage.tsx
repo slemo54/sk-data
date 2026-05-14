@@ -435,6 +435,18 @@ export default function OperatorePage() {
     setSelectedIds(new Set());
   };
 
+  const handleLinkedinSkFilter = () => {
+    setFilters({
+      source: 'linkedin_sk',
+      status: 'all',
+      reviewStatus: 'all',
+      nextAction: 'all',
+    });
+    setSearchInput('');
+    setPage(1);
+    setSelectedIds(new Set());
+  };
+
   const renderPagination = () => {
     if (totalPages <= 1) return null;
     return (
@@ -540,6 +552,22 @@ export default function OperatorePage() {
               <span className="text-2xl font-bold">{kpi.contacted.toLocaleString()}</span>
             </div>
           </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Button
+            variant={filters.source === 'linkedin_sk' ? 'default' : 'outline'}
+            size="sm"
+            onClick={handleLinkedinSkFilter}
+            className="gap-2"
+          >
+            <img
+              src="./sk-linkedin-source.png"
+              alt=""
+              className="h-5 w-5 rounded-full object-contain"
+            />
+            From LinkedIn
+          </Button>
         </div>
 
         {/* Filters */}
