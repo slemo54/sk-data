@@ -503,7 +503,7 @@ export default function OperatorePage() {
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full p-6 space-y-6">
         {/* KPI */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4">
             <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
               <RefreshCw className="h-5 w-5" />
@@ -552,22 +552,25 @@ export default function OperatorePage() {
               <span className="text-2xl font-bold">{kpi.contacted.toLocaleString()}</span>
             </div>
           </div>
-        </div>
-
-        <div className="flex justify-end">
-          <Button
-            variant={filters.source === 'linkedin_sk' ? 'default' : 'outline'}
-            size="sm"
+          <button
+            type="button"
             onClick={handleLinkedinSkFilter}
-            className="gap-2"
+            className={`rounded-xl border bg-card p-5 shadow-sm flex items-center gap-4 text-left hover:bg-accent/40 transition-colors ${
+              filters.source === 'linkedin_sk' ? 'ring-2 ring-primary border-primary' : ''
+            }`}
           >
-            <img
-              src="./sk-linkedin-source.png"
-              alt=""
-              className="h-5 w-5 rounded-full object-contain"
-            />
-            From LinkedIn
-          </Button>
+            <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center">
+              <img
+                src="./sk-linkedin-source.png"
+                alt=""
+                className="h-7 w-7 rounded-full object-contain"
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">From LinkedIn</span>
+              <span className="text-2xl font-bold">SK</span>
+            </div>
+          </button>
         </div>
 
         {/* Filters */}
