@@ -68,6 +68,10 @@ function isMissing(value) {
   return !value || value.trim().toLowerCase() === 'no data';
 }
 
+function hasRealLocation(contact) {
+  return !isMissing(contact.city) || !isMissing(contact.country);
+}
+
 function cleanNoDataLocation(contact) {
   const patch = {};
 
@@ -122,7 +126,7 @@ async function fetchLinkedinContacts(supabase) {
     const to = from + pageSize - 1;
     const { data, error } = await supabase
       .from('contacts')
-      .select('id,full_name,normalized_name,city,country,title,occupation,contact_sources!inner(source)')
+      .select('id,full_name,normalized_name,city,country,linkedin_url,next_action,status,title,occupation,contact_sources!inner(source)')
       .eq('contact_sources.source', 'linkedin_sk')
       .range(from, to);
 
@@ -215,9 +219,12 @@ function buildUpdates(exportRows, linkedinContacts) {
       updates.push({
         id: contact.id,
         full_name: contact.full_name,
+        linkedin_url: contact.linkedin_url,
         before: {
           city: contact.city,
           country: contact.country,
+          next_action: contact.next_action,
+          status: contact.status,
           title: contact.title,
           occupation: contact.occupation,
         },
@@ -236,9 +243,12 @@ function buildUpdates(exportRows, linkedinContacts) {
       updates.push({
         id: contact.id,
         full_name: contact.full_name,
+        linkedin_url: contact.linkedin_url,
         before: {
           city: contact.city,
           country: contact.country,
+          next_action: contact.next_action,
+          status: contact.status,
           title: contact.title,
           occupation: contact.occupation,
         },
@@ -260,6 +270,11 @@ async function applyUpdates(supabase, updates) {
         .from('contacts')
         .update({
           ...update.patch,
+          ...(
+            update.linkedinReady
+              ? { next_action: 'pronto_da_contattare', status: 'reviewed' }
+              : {}
+          ),
           updated_at: new Date().toISOString(),
         })
         .eq('id', update.id);
@@ -286,21 +301,29 @@ async function main() {
   const exportRows = parseExport(fs.readFileSync(csvPath, 'utf8'));
   const linkedinContacts = await fetchLinkedinContacts(supabase);
   const { updates, skippedAmbiguous } = buildUpdates(exportRows, linkedinContacts);
+  const updatesWithReadyRule = updates.map((update) => {
+    const after = { ...update.before, ...update.patch };
+    return {
+      ...update,
+      linkedinReady: Boolean(update.linkedin_url) && hasRealLocation(after),
+    };
+  });
 
   fs.mkdirSync('tmp', { recursive: true });
   const preview = {
     csvPath,
     csvRows: exportRows.length,
     linkedinContacts: linkedinContacts.length,
-    updates: updates.length,
+    updates: updatesWithReadyRule.length,
+    linkedinReadyUpdates: updatesWithReadyRule.filter((update) => update.linkedinReady).length,
     skippedAmbiguous: skippedAmbiguous.length,
-    sampleUpdates: updates.slice(0, 10),
+    sampleUpdates: updatesWithReadyRule.slice(0, 10),
     sampleSkippedAmbiguous: skippedAmbiguous.slice(0, 10),
   };
   fs.writeFileSync('tmp/linkedin-location-enrichment-preview.json', JSON.stringify(preview, null, 2));
   fs.writeFileSync('tmp/linkedin-location-enrichment-rollback.json', JSON.stringify({
     created_at: new Date().toISOString(),
-    updates: updates.map(({ id, full_name, before }) => ({ id, full_name, before })),
+    updates: updatesWithReadyRule.map(({ id, full_name, before }) => ({ id, full_name, before })),
   }, null, 2));
 
   console.log(JSON.stringify(preview, null, 2));
@@ -310,7 +333,7 @@ async function main() {
     return;
   }
 
-  const updated = await applyUpdates(supabase, updates);
+  const updated = await applyUpdates(supabase, updatesWithReadyRule);
   console.log(`Updated ${updated} contacts`);
 }
 

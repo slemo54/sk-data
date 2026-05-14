@@ -298,7 +298,7 @@ for insert
 with check (true);
 
 -- Grants
--- Mark contacts with both Instagram and LinkedIn as Ready to Contact
+-- Mark contacts with both Instagram and LinkedIn, or LinkedIn plus a real location, as Ready to Contact
 -- Useful one-off or periodic batch operation
 create or replace function public.mark_social_ready()
 returns integer
@@ -310,10 +310,13 @@ begin
   set next_action = 'pronto_da_contattare',
       status = 'reviewed',
       updated_at = now()
-  where instagram_url is not null
-    and instagram_url <> ''
-    and linkedin_url is not null
+  where linkedin_url is not null
     and linkedin_url <> ''
+    and (
+      (instagram_url is not null and instagram_url <> '')
+      or nullif(lower(trim(coalesce(city, ''))), 'no data') is not null
+      or nullif(lower(trim(coalesce(country, ''))), 'no data') is not null
+    )
     and next_action is distinct from 'pronto_da_contattare';
 
   get diagnostics affected = row_count;
