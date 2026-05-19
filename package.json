@@ -14,7 +14,8 @@
     "import:linkedin-sk-enrichment": "node scripts/import-linkedin-sk-enrichment.mjs",
     "test:linkedin-connections": "node scripts/linkedin-connections-lib.test.mjs",
     "import:linkedin-connections": "node scripts/import-linkedin-connections.mjs",
-    "enrich:linkedin-locations": "node scripts/enrich-linkedin-locations.mjs"
+    "enrich:linkedin-locations": "node scripts/enrich-linkedin-locations.mjs",
+    "import:via-db": "python3 scripts/import-via-db.py"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

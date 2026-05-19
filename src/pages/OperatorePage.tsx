@@ -13,12 +13,13 @@ import {
   fetchContactSources,
   fetchCities,
   fetchDashboardKpi,
+  fetchViaCourseClasses,
   releaseContact,
   toggleApproval,
   toggleContacted,
   updateContact,
 } from '@/lib/contactsService';
-import { hasLinkedinSkSource } from '@/lib/contactSourceDisplay';
+import { hasLinkedinSkSource, hasViaDbSource } from '@/lib/contactSourceDisplay';
 import { useDebounce } from '@/hooks/use-debounce';
 import type {
   Contact,
@@ -118,6 +119,7 @@ export default function OperatorePage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSaving, setBulkSaving] = useState(false);
   const [allCities, setAllCities] = useState<string[]>([]);
+  const [viaCourseClasses, setViaCourseClasses] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const debouncedQuery = useDebounce(searchInput, 300);
 
@@ -195,6 +197,10 @@ export default function OperatorePage() {
 
   useEffect(() => {
     void fetchCities().then(setAllCities).catch(() => { /* silent */ });
+  }, []);
+
+  useEffect(() => {
+    void fetchViaCourseClasses().then(setViaCourseClasses).catch(() => { /* silent */ });
   }, []);
 
   useEffect(() => {
@@ -429,6 +435,7 @@ export default function OperatorePage() {
       status: 'all',
       reviewStatus: 'all',
       nextAction: 'all',
+      viaCourse: undefined,
     });
     setSearchInput('');
     setPage(1);
@@ -614,7 +621,10 @@ export default function OperatorePage() {
             </Select>
             <Select
               value={filters.source ?? 'all'}
-              onValueChange={(v) => handleFilterChange({ source: v as 'all' | 'wine_awards' | 'guildsomm' | 'linkedin_sk' })}
+              onValueChange={(v) => handleFilterChange({
+                source: v as ContactsFilters['source'],
+                viaCourse: v === 'via_db' ? filters.viaCourse : undefined,
+              })}
             >
               <SelectTrigger className="w-[160px] h-9 bg-background">
                 <SelectValue placeholder="Fonte" />
@@ -624,6 +634,7 @@ export default function OperatorePage() {
                 <SelectItem value="wine_awards">Wine Awards</SelectItem>
                 <SelectItem value="guildsomm">GuildSomm</SelectItem>
                 <SelectItem value="linkedin_sk">LinkedIn SK</SelectItem>
+                <SelectItem value="via_db">VIA DB</SelectItem>
               </SelectContent>
             </Select>
             <Input
@@ -673,6 +684,22 @@ export default function OperatorePage() {
                 <Checkbox checked={Boolean(filters.assignedToOthers)} onCheckedChange={(v) => handleFilterChange({ assignedToOthers: Boolean(v), userId: userEmail })} />
                 <span className="text-muted-foreground">Assegnati ad altri</span>
               </label>
+              {filters.source === 'via_db' && (
+                <Select
+                  value={filters.viaCourse ?? 'all'}
+                  onValueChange={(v) => handleFilterChange({ viaCourse: v === 'all' ? undefined : v })}
+                >
+                  <SelectTrigger className="min-w-[190px] h-8 text-xs bg-background border-primary/40 ring-1 ring-primary/20">
+                    <SelectValue placeholder="Course/class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tutti i course/class</SelectItem>
+                    {viaCourseClasses.map((course) => (
+                      <SelectItem key={course} value={course}>{course}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={handleResetFilters} className="text-muted-foreground">
@@ -805,6 +832,14 @@ export default function OperatorePage() {
                                 alt="Da LinkedIn SK"
                                 title="Da LinkedIn SK"
                                 className="h-5 w-5 rounded-full object-contain"
+                              />
+                            )}
+                            {hasViaDbSource(contact) && (
+                              <img
+                                src="./via-source.jpg"
+                                alt="VIA DB"
+                                title="VIA DB"
+                                className="h-5 w-5 rounded-full object-cover"
                               />
                             )}
                           </span>

@@ -126,6 +126,29 @@ function buildFilters(filters: ContactsFilters): string {
   return params.length ? `&${params.join('&')}` : '';
 }
 
+function buildSourceFilter(filters: ContactsFilters): string {
+  const source = filters.source;
+  if (!source || source === 'all') return '';
+
+  const parts: string[] = [];
+
+  if (source === 'via_db') {
+    parts.push(`contact_sources.source_key=like.${encodeURIComponent('via_db:*')}`);
+    if (filters.viaCourse && filters.viaCourse !== 'all') {
+      parts.push(`contact_sources.wine_role=eq.${encodeURIComponent(filters.viaCourse)}`);
+    }
+    return `&${parts.join('&')}`;
+  }
+
+  parts.push(`contact_sources.source=eq.${encodeURIComponent(source)}`);
+
+  if (source === 'wine_awards') {
+    parts.push(`contact_sources.source_key=not.like.${encodeURIComponent('via_db:*')}`);
+  }
+
+  return `&${parts.join('&')}`;
+}
+
 export async function fetchContacts(
   filters: ContactsFilters,
   pagination: Pagination,
@@ -136,13 +159,11 @@ export async function fetchContacts(
 
   // Per filtro su source usiamo embedded resource con !inner
   const selectClause = hasSourceFilter
-    ? '*,contact_sources!inner(source)'
-    : '*,contact_sources(source)';
+    ? '*,contact_sources!inner(source,source_key,raw_data)'
+    : '*,contact_sources(source,source_key,raw_data)';
 
   const filterParams = buildFilters(filters);
-  const sourceFilter = hasSourceFilter
-    ? `&contact_sources.source=eq.${encodeURIComponent(filters.source!)}`
-    : '';
+  const sourceFilter = buildSourceFilter(filters);
 
   const offset = (pagination.page - 1) * pagination.pageSize;
   const order = `order=${sort.field}.${sort.direction}`;
@@ -321,6 +342,18 @@ export async function fetchCities(): Promise<string[]> {
     if (r.city) set.add(r.city);
   });
   return [...set].sort();
+}
+
+export async function fetchViaCourseClasses(): Promise<string[]> {
+  const rows = await sbFetch<Array<{ wine_role: string | null }>>(
+    `/rest/v1/contact_sources?select=wine_role&source_key=like.${encodeURIComponent('via_db:*')}&wine_role=not.is.null`,
+  );
+  const set = new Set<string>();
+  rows.forEach((row) => {
+    const course = row.wine_role?.trim();
+    if (course) set.add(course);
+  });
+  return [...set].sort((a, b) => a.localeCompare(b));
 }
 
 // Operator approval

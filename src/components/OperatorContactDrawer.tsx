@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Contact, ContactSource, ContactPatch } from '@/types/contact';
-import { getSourceLabel } from '@/lib/contactSourceDisplay';
+import { getSourceLabel, isViaDbSource } from '@/lib/contactSourceDisplay';
 import { buildLocationSuggestions } from '@/lib/locationSuggestions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,12 @@ interface Props {
   onDelete?: () => void;
   saving: boolean;
   cities?: string[];
+}
+
+function sourceValue(source: ContactSource, key: string): string | null {
+  const value = source.raw_data?.[key];
+  if (value === null || value === undefined || value === '') return null;
+  return String(value);
 }
 
 export default function OperatorContactDrawer({
@@ -280,10 +286,22 @@ export default function OperatorContactDrawer({
               <div className="space-y-2">
                 {sources.map((source) => (
                   <div key={source.id} className="text-sm border rounded-xl p-3 bg-muted/30">
-                    <div className="font-medium">{getSourceLabel(source.source)}</div>
+                    <div className="font-medium">{getSourceLabel(source.source, source)}</div>
                     <div className="text-muted-foreground text-xs mt-0.5">
                       {source.restaurant_name ?? '-'} · {source.award ?? '-'} · {source.wine_role ?? '-'}
                     </div>
+                    {isViaDbSource(source) && (
+                      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                        <span className="text-muted-foreground">Year</span>
+                        <span>{sourceValue(source, 'via_year') ?? '-'}</span>
+                        <span className="text-muted-foreground">Course/class</span>
+                        <span>{sourceValue(source, 'via_course_class') ?? '-'}</span>
+                        <span className="text-muted-foreground">Phone</span>
+                        <span>{sourceValue(source, 'via_phone') ?? '-'}</span>
+                        <span className="text-muted-foreground">IWA/IWE</span>
+                        <span>{sourceValue(source, 'via_iwa_iwe') ?? '-'}</span>
+                      </div>
+                    )}
                     {source.profile_url && (
                       <a href={source.profile_url} target="_blank" rel="noreferrer" className="text-xs text-primary underline mt-1 inline-flex items-center gap-1">
                         Profilo <ExternalLink className="h-3 w-3" />

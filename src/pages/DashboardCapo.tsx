@@ -7,12 +7,13 @@ import {
   fetchContacts,
   fetchContactSources,
   fetchDashboardKpi,
+  fetchViaCourseClasses,
   updateContact,
   fetchPendingOperators,
   approveOperator,
   rejectOperator,
 } from '@/lib/contactsService';
-import { hasLinkedinSkSource } from '@/lib/contactSourceDisplay';
+import { hasLinkedinSkSource, hasViaDbSource } from '@/lib/contactSourceDisplay';
 import type { PendingOperator } from '@/lib/contactsService';
 import { useDebounce } from '@/hooks/use-debounce';
 import type {
@@ -137,6 +138,7 @@ export default function DashboardSK() {
   const [searchInput, setSearchInput] = useState('');
   const debouncedQuery = useDebounce(searchInput, 300);
   const [pendingOperators, setPendingOperators] = useState<PendingOperator[]>([]);
+  const [viaCourseClasses, setViaCourseClasses] = useState<string[]>([]);
 
   const selectedContact = useMemo(
     () => contacts.find((c) => c.id === selectedContactId) ?? null,
@@ -153,6 +155,7 @@ export default function DashboardSK() {
       filters.nextAction !== 'all' ||
       filters.location !== undefined ||
       filters.country !== undefined ||
+      filters.viaCourse !== undefined ||
       filters.query !== undefined ||
       Boolean(filters.hasInstagram) ||
       Boolean(filters.hasLinkedin) ||
@@ -224,6 +227,10 @@ export default function DashboardSK() {
   useEffect(() => {
     void refreshKpi();
   }, [refreshKpi]);
+
+  useEffect(() => {
+    void fetchViaCourseClasses().then(setViaCourseClasses).catch(() => { /* silent */ });
+  }, []);
 
   useEffect(() => {
     void refreshPendingOperators();
@@ -309,6 +316,7 @@ export default function DashboardSK() {
       status: 'all',
       reviewStatus: 'all',
       nextAction: 'pronto_da_contattare',
+      viaCourse: undefined,
     });
     setSearchInput('');
     setPage(1);
@@ -657,7 +665,10 @@ export default function DashboardSK() {
             </Select>
             <Select
               value={filters.source ?? 'all'}
-              onValueChange={(v) => handleFilterChange({ source: v as 'all' | 'wine_awards' | 'guildsomm' | 'linkedin_sk' })}
+              onValueChange={(v) => handleFilterChange({
+                source: v as ContactsFilters['source'],
+                viaCourse: v === 'via_db' ? filters.viaCourse : undefined,
+              })}
             >
               <SelectTrigger className="w-[160px] h-9 bg-background">
                 <SelectValue placeholder="Fonte" />
@@ -667,6 +678,7 @@ export default function DashboardSK() {
                 <SelectItem value="wine_awards">Wine Awards</SelectItem>
                 <SelectItem value="guildsomm">GuildSomm</SelectItem>
                 <SelectItem value="linkedin_sk">LinkedIn SK</SelectItem>
+                <SelectItem value="via_db">VIA DB</SelectItem>
               </SelectContent>
             </Select>
             <Input
@@ -717,6 +729,22 @@ export default function DashboardSK() {
                 <SelectItem value="no">Non cont.</SelectItem>
               </SelectContent>
             </Select>
+            {filters.source === 'via_db' && (
+              <Select
+                value={filters.viaCourse ?? 'all'}
+                onValueChange={(v) => handleFilterChange({ viaCourse: v === 'all' ? undefined : v })}
+              >
+                <SelectTrigger className="min-w-[190px] h-8 text-xs bg-background border-primary/40 ring-1 ring-primary/20">
+                  <SelectValue placeholder="Course/class" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti i course/class</SelectItem>
+                  {viaCourseClasses.map((course) => (
+                    <SelectItem key={course} value={course}>{course}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <div className="flex-1" />
             <Button
               variant="ghost"
@@ -855,6 +883,14 @@ export default function DashboardSK() {
                               alt="Da LinkedIn SK"
                               title="Da LinkedIn SK"
                               className="h-5 w-5 rounded-full object-contain"
+                            />
+                          )}
+                          {hasViaDbSource(contact) && (
+                            <img
+                              src="./via-source.jpg"
+                              alt="VIA DB"
+                              title="VIA DB"
+                              className="h-5 w-5 rounded-full object-cover"
                             />
                           )}
                         </div>

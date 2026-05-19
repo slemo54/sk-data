@@ -10,7 +10,7 @@ export type NextAction =
   | 'da_verificare'
   | 'chiuso';
 
-export type ContactSourceName = 'wine_awards' | 'guildsomm' | 'linkedin_sk';
+export type ContactSourceName = 'wine_awards' | 'guildsomm' | 'linkedin_sk' | 'via_db';
 
 export interface Contact {
   id: string;
@@ -38,7 +38,7 @@ export interface Contact {
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;
-  contact_sources?: Pick<ContactSource, 'source'>[];
+  contact_sources?: Pick<ContactSource, 'source' | 'source_key' | 'raw_data'>[];
 }
 
 export interface ContactSource {
@@ -60,6 +60,7 @@ export interface ContactsFilters {
   city?: string;
   location?: string;
   source?: ContactSourceName | 'all';
+  viaCourse?: string;
   hasInstagram?: boolean;
   hasLinkedin?: boolean;
   hasEmail?: boolean;
