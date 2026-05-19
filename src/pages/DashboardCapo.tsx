@@ -50,12 +50,6 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
   Table,
   TableBody,
   TableCell,
@@ -70,7 +64,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
   EyeOff,
-  FileText,
   Instagram,
   Linkedin,
   LogOut,
@@ -925,20 +918,6 @@ export default function DashboardSK() {
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
                       <div className="flex items-center justify-center gap-1">
-                        {contact.notes && (
-                          <TooltipProvider delayDuration={100}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600">
-                                  <FileText className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="max-w-xs">
-                                <p className="text-xs whitespace-pre-wrap">{contact.notes}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
                         {contact.instagram_url && (
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { void markSeen(contact); window.open(contact.instagram_url!, '_blank', 'noopener,noreferrer'); }}>
                             <Instagram className="h-4 w-4 text-pink-600" />
