@@ -554,7 +554,7 @@ export default function DashboardSK() {
             </div>
           </button>
 
-          {/* 3. Contacted */}
+          {/* 3. Media */}
           <button
             type="button"
             aria-pressed={filters.contacted === true}
@@ -573,7 +573,7 @@ export default function DashboardSK() {
               <CheckCircle2 className="h-5 w-5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contacted</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Media</span>
               <span className="text-2xl font-bold">{kpi.contacted.toLocaleString()}</span>
             </div>
           </button>
