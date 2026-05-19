@@ -428,6 +428,8 @@ export default function DashboardSK() {
     );
   };
 
+  const isViaSourceSelected = filters.source === 'via_db';
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b bg-card px-6 py-4">
@@ -650,7 +652,11 @@ export default function DashboardSK() {
               value={filters.nextAction ?? 'all'}
               onValueChange={(v) => handleFilterChange({ nextAction: v === 'all' ? 'all' : (v as NextAction) })}
             >
-              <SelectTrigger className="w-[170px] h-9 bg-background">
+              <SelectTrigger className={`w-[170px] h-9 ${
+                isViaSourceSelected
+                  ? 'bg-amber-50 border-amber-500 text-amber-950 ring-2 ring-amber-300 shadow-sm'
+                  : 'bg-background'
+              }`}>
                 <SelectValue placeholder="Next Action" />
               </SelectTrigger>
               <SelectContent>
@@ -729,12 +735,12 @@ export default function DashboardSK() {
                 <SelectItem value="no">Non cont.</SelectItem>
               </SelectContent>
             </Select>
-            {filters.source === 'via_db' && (
+            {isViaSourceSelected && (
               <Select
                 value={filters.viaCourse ?? 'all'}
                 onValueChange={(v) => handleFilterChange({ viaCourse: v === 'all' ? undefined : v })}
               >
-                <SelectTrigger className="min-w-[190px] h-8 text-xs bg-background border-primary/40 ring-1 ring-primary/20">
+                <SelectTrigger className="min-w-[190px] h-8 text-xs bg-amber-50 border-amber-500 text-amber-950 ring-2 ring-amber-300 shadow-sm">
                   <SelectValue placeholder="Course/class" />
                 </SelectTrigger>
                 <SelectContent>
