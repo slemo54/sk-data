@@ -78,6 +78,28 @@ def year_from_course(value):
     return match.group(1) if match else None
 
 
+def normalize_via_course_class(course, year=None):
+    course_text = clean(course)
+    year_text = clean(year) or year_from_course(course_text)
+    if not course_text and not year_text:
+        return None
+
+    base = course_text or ""
+    base = re.sub(r"\([^)]*\)", "", base)
+    base = re.sub(r"^\s*VIA\s+", "", base, flags=re.IGNORECASE)
+    base = re.sub(r"\b(?:NEW STUDENT|RESIT|ONLY EXAM|EXAM ONLY)\b", "", base, flags=re.IGNORECASE)
+    if year_text:
+        for year_part in re.findall(r"20\d{2}", year_text):
+            base = re.sub(rf"\b{re.escape(year_part)}\b", "", base)
+    base = re.sub(r"\b20\d{2}\b", "", base)
+    base = re.sub(r"\s+", " ", base).strip(" -")
+    base = base.upper()
+
+    if base and year_text:
+        return f"{base} {year_text}".strip()
+    return base or year_text
+
+
 def make_source_key(*parts):
     digest = hashlib.sha1("|".join(clean(part) or "" for part in parts).encode("utf-8")).hexdigest()[:18]
     return f"via_db:{digest}"
@@ -111,6 +133,7 @@ def parse_ambassadors(path):
                 continue
             course = clean(row.get("Course/class")) or clean(row.get("Course"))
             year = clean(row.get("Year")) or year_from_course(course)
+            normalized_course = normalize_via_course_class(course, year)
             entry = {
                 "first_name": first,
                 "last_name": last,
@@ -125,7 +148,8 @@ def parse_ambassadors(path):
                 "title": clean(row.get("JOB TITLE")),
                 "occupation": clean(row.get("JOB TITLE")),
                 "year": year,
-                "course_class": course,
+                "course_class": normalized_course,
+                "original_course_class": course,
                 "iwa_iwe": clean(row.get("IWA/IWE")),
                 "source_file": Path(path).name,
                 "source_sheet": None,
@@ -177,6 +201,8 @@ def parse_candidates(path):
             if not full:
                 continue
             course = clean(get_cell(row, positions, "Edition")) or sheet.title
+            year = year_from_course(course)
+            normalized_course = normalize_via_course_class(course, year)
             city = location_city(
                 get_cell(row, positions, "City", 1) or get_cell(row, positions, "City", 0),
                 get_cell(row, positions, "State"),
@@ -200,8 +226,9 @@ def parse_candidates(path):
                 "employer": clean(get_cell(row, positions, "Company")),
                 "title": title,
                 "occupation": title,
-                "year": year_from_course(course),
-                "course_class": course,
+                "year": year,
+                "course_class": normalized_course,
+                "original_course_class": course,
                 "iwa_iwe": clean(get_cell(row, positions, "IWA/IWE")),
                 "source_file": Path(path).name,
                 "source_sheet": sheet.title,
@@ -376,6 +403,7 @@ def build_source_rows(people):
                     "source": "via_db",
                     "via_year": source.get("year"),
                     "via_course_class": source.get("course_class"),
+                    "via_course_class_original": source.get("original_course_class"),
                     "via_phone": source.get("phone"),
                     "via_iwa_iwe": source.get("iwa_iwe"),
                     "via_state": source.get("state"),
