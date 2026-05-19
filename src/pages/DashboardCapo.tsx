@@ -875,21 +875,21 @@ export default function DashboardSK() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      {contact.instagram_url && contact.linkedin_url ? (
-                        <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1">
-                          <Instagram className="h-3 w-3" />
-                          <Linkedin className="h-3 w-3" />
-                          Completo
-                        </Badge>
-                      ) : contact.instagram_url || contact.linkedin_url ? (
-                        <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 gap-1">
-                          {contact.instagram_url ? <Instagram className="h-3 w-3" /> : <Linkedin className="h-3 w-3" />}
-                          Parziale
-                        </Badge>
+                      {contact.instagram_url || contact.linkedin_url ? (
+                        <div className="inline-flex items-center justify-center gap-1">
+                          {contact.instagram_url && (
+                            <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-200 px-1.5">
+                              <Instagram className="h-3 w-3" />
+                            </Badge>
+                          )}
+                          {contact.linkedin_url && (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 px-1.5">
+                              <Linkedin className="h-3 w-3" />
+                            </Badge>
+                          )}
+                        </div>
                       ) : (
-                        <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">
-                          Mancante
-                        </Badge>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
