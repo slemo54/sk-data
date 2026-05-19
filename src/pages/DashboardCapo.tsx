@@ -811,16 +811,13 @@ export default function DashboardSK() {
                   <TableHead onClick={() => handleSort('contacted')} className="cursor-pointer whitespace-nowrap text-center">
                     Media {sort.field === 'contacted' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
                   </TableHead>
-                  <TableHead onClick={() => handleSort('assigned_to')} className="cursor-pointer whitespace-nowrap text-center">
-                    Assegnato {sort.field === 'assigned_to' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
-                  </TableHead>
                   <TableHead className="whitespace-nowrap text-center">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         Caricamento contatti...
@@ -830,7 +827,7 @@ export default function DashboardSK() {
                 )}
                 {!loading && !contacts.length && initialLoadDone && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       Nessun contatto trovato.
                     </TableCell>
                   </TableRow>
@@ -912,9 +909,6 @@ export default function DashboardSK() {
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
                       <Switch checked={contact.contacted} onCheckedChange={() => void toggleField(contact, 'contacted')} aria-label="Toggle contacted" />
-                    </TableCell>
-                    <TableCell className="text-center text-xs text-muted-foreground truncate max-w-[120px]">
-                      {contact.assigned_to ?? '-'}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
                       <div className="flex items-center justify-center gap-1">
