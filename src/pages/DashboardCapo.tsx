@@ -816,7 +816,7 @@ export default function DashboardSK() {
                     Approval {sort.field === 'approval' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
                   </TableHead>
                   <TableHead onClick={() => handleSort('contacted')} className="cursor-pointer whitespace-nowrap text-center">
-                    Contacted {sort.field === 'contacted' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
+                    Media {sort.field === 'contacted' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
                   </TableHead>
                   <TableHead onClick={() => handleSort('assigned_to')} className="cursor-pointer whitespace-nowrap text-center">
                     Assegnato {sort.field === 'assigned_to' ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
