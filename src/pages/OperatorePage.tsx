@@ -18,6 +18,7 @@ import {
   toggleApproval,
   toggleContacted,
   updateContact,
+  upsertViaSource,
 } from '@/lib/contactsService';
 import { hasLinkedinSkSource, hasViaDbSource } from '@/lib/contactSourceDisplay';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -29,6 +30,7 @@ import type {
   ContactsFilters,
   DashboardKpi,
   NextAction,
+  ViaSourcePatch,
 } from '@/types/contact';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -314,6 +316,19 @@ export default function OperatorePage() {
       await refreshKpi();
     } catch (err) {
       setError((err as Error).message || 'Save failed');
+    }
+  };
+
+  const handleSaveVia = async (patch: ViaSourcePatch) => {
+    if (!selectedContact) return;
+    try {
+      await upsertViaSource(selectedContact.id, patch);
+      const sources = await fetchContactSources(selectedContact.id);
+      setSelectedSources(sources);
+      await refreshContacts();
+      toast.success('Dati VIA aggiornati');
+    } catch (err) {
+      toast.error((err as Error).message || 'Aggiornamento VIA fallito');
     }
   };
 
@@ -970,6 +985,7 @@ export default function OperatorePage() {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         onSave={handleSave}
+        onSaveVia={handleSaveVia}
         onReadyToContact={() => {
           if (selectedContact) void handleReadyToContact();
         }}

@@ -9,6 +9,7 @@ import type {
   DashboardKpi,
   Pagination,
   ReviewStatus,
+  ViaSourcePatch,
 } from '@/types/contact';
 import { sbFetch, sbFetchWithCount } from '@/lib/supabase';
 import { getAccessToken } from '@/lib/auth';
@@ -334,6 +335,29 @@ export async function fetchContactSources(contactId: string): Promise<ContactSou
   return sbFetch<ContactSource[]>(
     `/rest/v1/contact_sources?select=*&contact_id=eq.${contactId}&order=created_at.asc`,
   );
+}
+
+export async function upsertViaSource(contactId: string, patch: ViaSourcePatch): Promise<ContactSource> {
+  const token = getAccessToken();
+  if (!token) {
+    throw new Error('Sessione mancante.');
+  }
+
+  const response = await fetch('/api/upsert-via-source', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ contactId, ...patch }),
+  });
+
+  const body = await response.json() as { source?: ContactSource; error?: string };
+  if (!response.ok || !body.source) {
+    throw new Error(body.error || `Aggiornamento VIA fallito (${response.status})`);
+  }
+
+  return body.source;
 }
 
 export function computeDashboardKpi(contacts: Contact[]): DashboardKpi {

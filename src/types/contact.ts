@@ -124,6 +124,13 @@ export interface ContactPatch {
   country?: string | null;
 }
 
+export interface ViaSourcePatch {
+  year?: string | null;
+  courseClass?: string | null;
+  phone?: string | null;
+  iwaIwe?: string | null;
+}
+
 export interface ContactCreate {
   full_name?: string | null;
   first_name?: string | null;

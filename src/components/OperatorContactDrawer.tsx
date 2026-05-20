@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Contact, ContactSource, ContactPatch } from '@/types/contact';
+import type { Contact, ContactSource, ContactPatch, ViaSourcePatch } from '@/types/contact';
 import { getSourceLabel, isViaDbSource } from '@/lib/contactSourceDisplay';
 import { buildLocationSuggestions } from '@/lib/locationSuggestions';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (patch: ContactPatch) => void;
+  onSaveVia?: (patch: ViaSourcePatch) => void;
   onReadyToContact: () => void;
   onClaimSingle: () => void;
   onRelease?: () => void;
@@ -35,6 +36,7 @@ export default function OperatorContactDrawer({
   open,
   onOpenChange,
   onSave,
+  onSaveVia,
   onReadyToContact,
   onClaimSingle,
   onRelease,
@@ -43,6 +45,9 @@ export default function OperatorContactDrawer({
   cities = [],
 }: Props) {
   const [draft, setDraft] = useState<ContactPatch>({});
+  const [viaDraft, setViaDraft] = useState<ViaSourcePatch>({});
+
+  const viaSource = sources.find(isViaDbSource);
 
   useEffect(() => {
     if (!contact) {
@@ -63,6 +68,15 @@ export default function OperatorContactDrawer({
     });
   }, [contact]);
 
+  useEffect(() => {
+    setViaDraft({
+      year: viaSource ? sourceValue(viaSource, 'via_year') : null,
+      courseClass: viaSource ? sourceValue(viaSource, 'via_course_class') ?? viaSource.wine_role : null,
+      phone: viaSource ? sourceValue(viaSource, 'via_phone') : null,
+      iwaIwe: viaSource ? sourceValue(viaSource, 'via_iwa_iwe') : null,
+    });
+  }, [viaSource]);
+
   if (!contact) return null;
 
   const isMine = contact.assigned_to === userEmail;
@@ -81,6 +95,13 @@ export default function OperatorContactDrawer({
     (draft.notes ?? '') !== (contact.notes ?? '')
   );
 
+  const isViaDirty = (
+    (viaDraft.year ?? '') !== (viaSource ? sourceValue(viaSource, 'via_year') ?? '' : '') ||
+    (viaDraft.courseClass ?? '') !== (viaSource ? sourceValue(viaSource, 'via_course_class') ?? viaSource.wine_role ?? '' : '') ||
+    (viaDraft.phone ?? '') !== (viaSource ? sourceValue(viaSource, 'via_phone') ?? '' : '') ||
+    (viaDraft.iwaIwe ?? '') !== (viaSource ? sourceValue(viaSource, 'via_iwa_iwe') ?? '' : '')
+  );
+
   const canReadyToContact = Boolean(
     contact.instagram_url || contact.linkedin_url || contact.email ||
     draft.instagram_url || draft.linkedin_url || draft.email,
@@ -91,21 +112,35 @@ export default function OperatorContactDrawer({
     setDraft((prev) => ({ ...prev, [field]: value }));
   };
 
+  const setViaField = (field: keyof ViaSourcePatch, value: string) => {
+    setViaDraft((prev) => ({ ...prev, [field]: value }));
+  };
+
   const handleSave = () => {
     if (isLocked) return;
-    const patch: ContactPatch = {
-      first_name: draft.first_name?.trim() || null,
-      last_name: draft.last_name?.trim() || null,
-      email: draft.email?.trim() || null,
-      instagram_url: draft.instagram_url?.trim() || null,
-      linkedin_url: draft.linkedin_url?.trim() || null,
-      employer: draft.employer?.trim() || null,
-      title: draft.title?.trim() || null,
-      occupation: draft.occupation?.trim() || null,
-      city: draft.city?.trim() || null,
-      notes: draft.notes?.trim() || null,
-    };
-    onSave(patch);
+    if (isDirty) {
+      const patch: ContactPatch = {
+        first_name: draft.first_name?.trim() || null,
+        last_name: draft.last_name?.trim() || null,
+        email: draft.email?.trim() || null,
+        instagram_url: draft.instagram_url?.trim() || null,
+        linkedin_url: draft.linkedin_url?.trim() || null,
+        employer: draft.employer?.trim() || null,
+        title: draft.title?.trim() || null,
+        occupation: draft.occupation?.trim() || null,
+        city: draft.city?.trim() || null,
+        notes: draft.notes?.trim() || null,
+      };
+      onSave(patch);
+    }
+    if (isViaDirty) {
+      onSaveVia?.({
+        year: viaDraft.year?.trim() || null,
+        courseClass: viaDraft.courseClass?.trim() || null,
+        phone: viaDraft.phone?.trim() || null,
+        iwaIwe: viaDraft.iwaIwe?.trim() || null,
+      });
+    }
   };
 
   return (
@@ -222,6 +257,57 @@ export default function OperatorContactDrawer({
             </div>
           </div>
 
+          {/* VIA DB */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">VIA DB</h3>
+            <div className="rounded-xl border bg-card p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Year</span>
+                  <Input
+                    value={viaDraft.year ?? ''}
+                    onChange={(e) => setViaField('year', e.target.value)}
+                    disabled={isLocked}
+                    placeholder="es. 2026"
+                    className="h-10"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Course/class</span>
+                  <Input
+                    value={viaDraft.courseClass ?? ''}
+                    onChange={(e) => setViaField('courseClass', e.target.value)}
+                    disabled={isLocked}
+                    placeholder="es. VERONA 2026"
+                    className="h-10"
+                  />
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Phone</span>
+                  <Input
+                    value={viaDraft.phone ?? ''}
+                    onChange={(e) => setViaField('phone', e.target.value)}
+                    disabled={isLocked}
+                    placeholder="Telefono"
+                    className="h-10"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">IWA/IWE</span>
+                  <Input
+                    value={viaDraft.iwaIwe ?? ''}
+                    onChange={(e) => setViaField('iwaIwe', e.target.value)}
+                    disabled={isLocked}
+                    placeholder="IWA o IWE"
+                    className="h-10"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+
           {/* Note */}
           <div className="space-y-2">
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -239,7 +325,7 @@ export default function OperatorContactDrawer({
           </div>
 
           {/* Dirty indicator */}
-          {isDirty && (
+          {(isDirty || isViaDirty) && (
             <div className="text-xs text-amber-600 font-medium">
               Modifiche non salvate
             </div>
@@ -247,7 +333,7 @@ export default function OperatorContactDrawer({
 
           {/* Bottoni */}
           <div className="flex items-center gap-3">
-            <Button onClick={handleSave} disabled={saving || isLocked || !isDirty} className="flex-1">
+            <Button onClick={handleSave} disabled={saving || isLocked || (!isDirty && !isViaDirty)} className="flex-1">
               {saving ? 'Salvataggio...' : 'Salva'}
             </Button>
             <Button
