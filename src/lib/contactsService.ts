@@ -214,9 +214,16 @@ export async function updateContact(contactId: string, patch: ContactPatch): Pro
 }
 
 export async function deleteContact(contactId: string): Promise<void> {
-  await sbFetch(`/rest/v1/contacts?id=eq.${contactId}`, {
+  const rows = await sbFetch<Array<{ id: string }>>(`/rest/v1/contacts?id=eq.${contactId}&select=id`, {
     method: 'DELETE',
+    headers: {
+      Prefer: 'return=representation',
+    },
   });
+
+  if (!rows.length) {
+    throw new Error('Contatto non eliminato: non è assegnato a te o non hai i permessi.');
+  }
 }
 
 export async function createContact(data: ContactCreate): Promise<Contact> {
