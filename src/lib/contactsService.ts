@@ -11,6 +11,7 @@ import type {
   ReviewStatus,
 } from '@/types/contact';
 import { sbFetch, sbFetchWithCount } from '@/lib/supabase';
+import { getAccessToken } from '@/lib/auth';
 
 function escapeLike(value: string): string {
   return value.replaceAll('%', '\\%').replaceAll('_', '\\_');
@@ -213,7 +214,40 @@ export async function updateContact(contactId: string, patch: ContactPatch): Pro
   return rows[0];
 }
 
-export async function deleteContact(contactId: string): Promise<void> {
+async function deleteContactViaApi(contactId: string): Promise<string | null> {
+  const token = getAccessToken();
+  if (!token) return null;
+
+  const response = await fetch('/api/delete-contact', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ contactId }),
+  });
+
+  const contentType = response.headers.get('content-type') ?? '';
+  const isJson = contentType.includes('application/json');
+  if (response.status === 404 && !isJson) {
+    return null;
+  }
+
+  const body = isJson ? await response.json() as { id?: string; error?: string } : null;
+  if (!response.ok) {
+    throw new Error(body?.error || `Eliminazione fallita (${response.status})`);
+  }
+  if (!body?.id) {
+    throw new Error('Eliminazione fallita: risposta server non valida.');
+  }
+
+  return body.id;
+}
+
+export async function deleteContact(contactId: string): Promise<string> {
+  const apiDeletedId = await deleteContactViaApi(contactId);
+  if (apiDeletedId) return apiDeletedId;
+
   const rows = await sbFetch<Array<{ id: string }>>(`/rest/v1/contacts?id=eq.${contactId}&select=id`, {
     method: 'DELETE',
     headers: {
@@ -224,6 +258,16 @@ export async function deleteContact(contactId: string): Promise<void> {
   if (!rows.length) {
     throw new Error('Contatto non eliminato: non è assegnato a te o non hai i permessi.');
   }
+
+  const stillPresent = await sbFetch<Array<{ id: string }>>(
+    `/rest/v1/contacts?select=id&id=eq.${contactId}&limit=1`,
+  );
+
+  if (stillPresent.length) {
+    throw new Error('Contatto non eliminato: il database lo restituisce ancora dopo la cancellazione.');
+  }
+
+  return rows[0].id;
 }
 
 export async function createContact(data: ContactCreate): Promise<Contact> {

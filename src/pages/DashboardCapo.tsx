@@ -385,13 +385,29 @@ export default function DashboardSK() {
     if (!selectedIds.size) return;
     setBulkSaving(true);
     try {
-      await Promise.all(Array.from(selectedIds).map((id) => deleteContact(id)));
-      toast.success(`${selectedIds.size} contatti eliminati`);
-      setSelectedIds(new Set());
+      const ids = Array.from(selectedIds);
+      const results = await Promise.allSettled(ids.map((id) => deleteContact(id)));
+      const deletedIds = new Set(
+        results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []),
+      );
+      const failedCount = results.length - deletedIds.size;
+
+      if (deletedIds.size) {
+        toast.success(`${deletedIds.size} contatti eliminati`);
+        setContacts((prev) => prev.filter((contact) => !deletedIds.has(contact.id)));
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          deletedIds.forEach((id) => next.delete(id));
+          return next;
+        });
+      }
+
+      if (failedCount) {
+        toast.error(`${failedCount} contatti non eliminati: verifica assegnazione o permessi`);
+      }
+
       await refreshContacts();
       await refreshKpi();
-    } catch (err) {
-      toast.error((err as Error).message || 'Bulk delete fallito');
     } finally {
       setBulkSaving(false);
     }
