@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase, setAccessToken } from '@/lib/auth';
-import { createPendingOperator, checkOperatorApproved as checkOperatorApproval } from '@/lib/contactsService';
+import { createPendingOperator, checkOperatorApproved as checkOperatorApproval, ensurePendingOperatorRequest } from '@/lib/contactsService';
 import type { Session, User } from '@supabase/supabase-js';
 
 export type UserRole = 'admin' | 'operator' | null;
@@ -139,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const approved = await checkOperatorApproval(email);
     setIsApproved(approved);
     if (!approved) {
+      await ensurePendingOperatorRequest(email);
       // Non sloggare, ma mostrare banner in attesa
       return;
     }

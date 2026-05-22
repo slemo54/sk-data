@@ -441,30 +441,55 @@ export interface PendingOperator {
   updated_at: string;
 }
 
+export type OperatorApprovalStatus = PendingOperator['status'] | 'admin' | 'missing' | 'error';
+
 export async function createPendingOperator(email: string): Promise<void> {
   await sbFetch('/rest/v1/pending_operators?on_conflict=email', {
     method: 'POST',
     headers: {
-      Prefer: 'resolution=merge-duplicates',
+      Prefer: 'resolution=ignore-duplicates',
     },
     body: JSON.stringify({ email, status: 'pending' }),
   });
 }
 
-export async function checkOperatorApproved(email: string): Promise<boolean> {
+export async function getOperatorApprovalStatus(email: string): Promise<OperatorApprovalStatus> {
   // Admin sempre approvato
-  if (email === 'kim@mammajumboshrimp.com') return true;
+  if (email === 'kim@mammajumboshrimp.com') return 'admin';
 
   try {
     // Cerca qualsiasi record per questa email
     const rows = await sbFetch<Array<PendingOperator>>(
-      `/rest/v1/pending_operators?select=*&email=eq.${encodeURIComponent(email)}`,
+      `/rest/v1/pending_operators?select=*&email=eq.${encodeURIComponent(email)}&limit=1`,
     );
 
-    return rows[0]?.status === 'approved';
+    return rows[0]?.status ?? 'missing';
   } catch {
+    return 'error';
+  }
+}
+
+export async function ensurePendingOperatorRequest(email: string): Promise<void> {
+  const status = await getOperatorApprovalStatus(email);
+  if (status === 'missing') {
+    await createPendingOperator(email);
+  }
+}
+
+export async function checkOperatorApproved(email: string): Promise<boolean> {
+  const status = await getOperatorApprovalStatus(email);
+  if (status === 'admin' || status === 'approved') return true;
+  if (status === 'missing') {
+    try {
+      await createPendingOperator(email);
+    } catch {
+      // L'accesso resta bloccato, ma evitiamo di rompere il rendering.
+    }
+  }
+  if (status === 'error') {
     return false;
   }
+  return false;
 }
 
 export async function fetchPendingOperators(): Promise<PendingOperator[]> {
