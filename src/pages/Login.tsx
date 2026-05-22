@@ -14,9 +14,7 @@ function extractRole(user: User | null): UserRole {
   if (!user) return null;
   if (user.email === SK_EMAIL) return 'admin';
   const fromApp = (user.app_metadata?.role as string) ?? null;
-  const fromUser = (user.user_metadata?.role as string) ?? null;
-  const r = fromApp || fromUser;
-  if (r === 'admin' || r === 'operator') return r;
+  if (fromApp === 'admin' || fromApp === 'operator') return fromApp;
   return 'operator';
 }
 

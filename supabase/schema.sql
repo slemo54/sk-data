@@ -80,6 +80,15 @@ create table if not exists public.admin_whitelist (
   email text primary key
 );
 
+create table if not exists public.pending_operators (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  auth_user_id uuid,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- Indexes
 create index if not exists idx_contacts_normalized_name on public.contacts(normalized_name);
 create index if not exists idx_contacts_status on public.contacts(status);
@@ -88,6 +97,8 @@ create index if not exists idx_contacts_country on public.contacts(country);
 create index if not exists idx_contacts_review_status on public.contacts(review_status);
 create index if not exists idx_contacts_next_action on public.contacts(next_action);
 create index if not exists idx_contact_sources_contact_id on public.contact_sources(contact_id);
+create index if not exists idx_pending_operators_email on public.pending_operators(email);
+create index if not exists idx_pending_operators_status on public.pending_operators(status);
 
 -- Auto-populate full_name from first_name + last_name
 create or replace function public.set_full_name()
@@ -124,6 +135,36 @@ drop trigger if exists trg_contacts_updated_at on public.contacts;
 create trigger trg_contacts_updated_at
 before update on public.contacts
 for each row execute function public.set_updated_at();
+
+drop trigger if exists trg_pending_operators_updated_at on public.pending_operators;
+create trigger trg_pending_operators_updated_at
+before update on public.pending_operators
+for each row execute function public.set_updated_at();
+
+create or replace function public.create_pending_operator_for_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.email is not null and new.email <> 'kim@mammajumboshrimp.com' then
+    insert into public.pending_operators (email, auth_user_id, status)
+    values (new.email, new.id, 'pending')
+    on conflict (email) do update
+      set auth_user_id = excluded.auth_user_id,
+          updated_at = now();
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_auth_user_pending_operator on auth.users;
+create trigger trg_auth_user_pending_operator
+after insert on auth.users
+for each row execute function public.create_pending_operator_for_new_user();
+
+revoke all on function public.create_pending_operator_for_new_user() from public, anon, authenticated;
 
 -- Audit trigger
 create or replace function public.log_contact_changes()
@@ -232,6 +273,9 @@ $$;
 alter table public.contacts enable row level security;
 alter table public.contact_sources enable row level security;
 alter table public.profiles_review_log enable row level security;
+alter table public.pending_operators enable row level security;
+
+grant select, insert, update on public.pending_operators to authenticated;
 
 -- Role helper
 create or replace function public.get_my_role()
@@ -248,7 +292,7 @@ as $$
       select 1 from public.admin_whitelist
       where email = coalesce(current_setting('request.jwt.claims', true)::json->>'email', '')
     ) then 'admin'
-    when coalesce(current_setting('request.jwt.claims', true)::json->>'user_metadata', '{}')::json->>'role' = 'admin'
+    when coalesce(current_setting('request.jwt.claims', true)::json->>'app_metadata', '{}')::json->>'role' = 'admin'
       then 'admin'
     else 'operator'
   end;
@@ -274,6 +318,27 @@ drop policy if exists logs_insert on public.profiles_review_log;
 create policy logs_insert on public.profiles_review_log
 for insert
 with check (true);
+
+drop policy if exists pending_operators_insert_self on public.pending_operators;
+create policy pending_operators_insert_self on public.pending_operators
+for insert to authenticated
+with check (
+  email = coalesce(current_setting('request.jwt.claims', true)::json->>'email', '')
+);
+
+drop policy if exists pending_operators_select_self_or_admin on public.pending_operators;
+create policy pending_operators_select_self_or_admin on public.pending_operators
+for select to authenticated
+using (
+  public.get_my_role() = 'admin'
+  or email = coalesce(current_setting('request.jwt.claims', true)::json->>'email', '')
+);
+
+drop policy if exists pending_operators_update_admin on public.pending_operators;
+create policy pending_operators_update_admin on public.pending_operators
+for update to authenticated
+using (public.get_my_role() = 'admin')
+with check (public.get_my_role() = 'admin');
 
 drop policy if exists contacts_update on public.contacts;
 create policy contacts_update on public.contacts

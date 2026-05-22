@@ -33,11 +33,7 @@ export function getCurrentRoleFromToken(): string | null {
   if (!accessToken) return null;
   try {
     const payload = JSON.parse(atob(accessToken.split('.')[1]));
-    return (
-      (payload.app_metadata as Record<string, unknown>)?.role ??
-      (payload.user_metadata as Record<string, unknown>)?.role ??
-      null
-    ) as string | null;
+    return ((payload.app_metadata as Record<string, unknown>)?.role ?? null) as string | null;
   } catch {
     return null;
   }

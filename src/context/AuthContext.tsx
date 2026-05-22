@@ -25,9 +25,7 @@ function extractRole(user: User | null): UserRole {
   // Hardcoded admin for owner email
   if (user.email === 'kim@mammajumboshrimp.com') return 'admin';
   const fromApp = (user.app_metadata?.role as string) ?? null;
-  const fromUser = (user.user_metadata?.role as string) ?? null;
-  const r = fromApp || fromUser;
-  if (r === 'admin' || r === 'operator') return r;
+  if (fromApp === 'admin' || fromApp === 'operator') return fromApp;
   return 'operator';
 }
 
@@ -113,17 +111,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
     if (error) throw error;
 
-    // Crea richiesta di approvazione
-    try {
-      await createPendingOperator(email);
-    } catch {
-      // Ignora errore se l'email è già presente
+    if (data.session?.access_token) {
+      setAccessToken(data.session.access_token);
+      try {
+        await createPendingOperator(email);
+      } catch (err) {
+        await supabase.auth.signOut();
+        throw new Error((err as Error).message || "Registrazione creata, ma richiesta approvazione non salvata. Contatta l'amministratore.");
+      }
     }
   };
 

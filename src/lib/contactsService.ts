@@ -442,8 +442,11 @@ export interface PendingOperator {
 }
 
 export async function createPendingOperator(email: string): Promise<void> {
-  await sbFetch('/rest/v1/pending_operators', {
+  await sbFetch('/rest/v1/pending_operators?on_conflict=email', {
     method: 'POST',
+    headers: {
+      Prefer: 'resolution=merge-duplicates',
+    },
     body: JSON.stringify({ email, status: 'pending' }),
   });
 }
@@ -458,15 +461,9 @@ export async function checkOperatorApproved(email: string): Promise<boolean> {
       `/rest/v1/pending_operators?select=*&email=eq.${encodeURIComponent(email)}`,
     );
 
-    if (rows.length === 0) {
-      // Nessun record = utente esistente prima della modifica (retrocompatibilità)
-      return true;
-    }
-
-    // Se c'è un record, deve essere 'approved'
-    return rows[0].status === 'approved';
+    return rows[0]?.status === 'approved';
   } catch {
-    return true; // In caso di errore, permetti accesso per non bloccare utenti esistenti
+    return false;
   }
 }
 
