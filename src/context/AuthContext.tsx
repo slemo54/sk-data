@@ -1,10 +1,10 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase, setAccessToken } from '@/lib/auth';
 import { createPendingOperator, checkOperatorApproved as checkOperatorApproval } from '@/lib/contactsService';
-import type { User } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 
 export type UserRole = 'admin' | 'operator' | null;
-export type MfaStatus = 'checking' | 'not_authenticated' | 'enrollment_required' | 'challenge_required' | 'verified';
+export type MfaStatus = 'checking' | 'not_authenticated' | 'enrollment_required' | 'challenge_required' | 'verified' | 'error';
 
 interface AuthContextValue {
   user: User | null;
@@ -35,9 +35,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [mfaStatus, setMfaStatus] = useState<MfaStatus>('checking');
   const [loading, setLoading] = useState(true);
   const [isApproved, setIsApproved] = useState(true);
+  const accessCheckId = useRef(0);
+
+  const applySession = (session: Session | null) => {
+    setAccessToken(session?.access_token ?? null);
+    const currentUser = session?.user ?? null;
+    setUser(currentUser);
+    setRole(extractRole(currentUser));
+    return currentUser;
+  };
 
   const refreshMfaStatus = async (): Promise<MfaStatus> => {
     const { data: sessionData } = await supabase.auth.getSession();
+    setAccessToken(sessionData.session?.access_token ?? null);
     if (!sessionData.session?.user) {
       setMfaStatus('not_authenticated');
       return 'not_authenticated';
@@ -61,34 +71,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      const session = data.session;
-      setAccessToken(session?.access_token ?? null);
-      const u = session?.user ?? null;
-      setUser(u);
-      setRole(extractRole(u));
-      if (u?.email) {
-        const approved = await checkOperatorApproval(u.email);
-        setIsApproved(approved);
-        await refreshMfaStatus();
-      } else {
-        setMfaStatus('not_authenticated');
-      }
-      setLoading(false);
-    });
+    const loadAccessState = async (currentUser: User | null, checkId: number) => {
+      try {
+        if (!currentUser?.email) {
+          setIsApproved(true);
+          setMfaStatus('not_authenticated');
+          return;
+        }
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setAccessToken(session?.access_token ?? null);
-      const u = session?.user ?? null;
-      setUser(u);
-      setRole(extractRole(u));
-      if (u?.email) {
-        const approved = await checkOperatorApproval(u.email);
+        const approved = await checkOperatorApproval(currentUser.email);
+        if (accessCheckId.current !== checkId) return;
         setIsApproved(approved);
-        await refreshMfaStatus();
-      } else {
-        setMfaStatus('not_authenticated');
+
+        if (approved || extractRole(currentUser) === 'admin') {
+          await refreshMfaStatus();
+        } else {
+          setMfaStatus('not_authenticated');
+        }
+      } catch (err) {
+        console.error('Auth access check failed', err);
+        if (accessCheckId.current !== checkId) return;
+        setMfaStatus('error');
+      } finally {
+        if (accessCheckId.current === checkId) {
+          setLoading(false);
+        }
       }
+    };
+
+    void (async () => {
+      const checkId = accessCheckId.current + 1;
+      accessCheckId.current = checkId;
+      try {
+        const { data } = await supabase.auth.getSession();
+        const currentUser = applySession(data.session);
+        await loadAccessState(currentUser, checkId);
+      } catch (err) {
+        console.error('Initial auth session failed', err);
+        setAccessToken(null);
+        setUser(null);
+        setRole(null);
+        setMfaStatus('not_authenticated');
+        setLoading(false);
+      }
+    })();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentUser = applySession(session);
+      const checkId = accessCheckId.current + 1;
+      accessCheckId.current = checkId;
+      setTimeout(() => {
+        void loadAccessState(currentUser, checkId);
+      }, 0);
     });
 
     return () => {
@@ -97,8 +131,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    applySession(data.session);
 
     // Verifica approvazione per operatori non-admin
     const approved = await checkOperatorApproval(email);

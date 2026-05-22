@@ -39,7 +39,7 @@ function ProtectedRoute({
   children: React.ReactNode;
   allowedRole?: 'admin' | 'operator';
 }) {
-  const { user, role, mfaStatus, loading, isApproved } = useAuth();
+  const { user, role, mfaStatus, loading, isApproved, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -62,6 +62,22 @@ function ProtectedRoute({
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-muted-foreground">Verifica sicurezza...</div>
+      </div>
+    );
+  }
+
+  if (mfaStatus === 'error') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+        <div className="w-full max-w-md bg-card border rounded-xl shadow-sm p-8 text-center space-y-4">
+          <h1 className="text-xl font-bold">Verifica sicurezza non riuscita</h1>
+          <p className="text-sm text-muted-foreground">
+            Non riesco a completare il controllo Google Authenticator. Esci e rifai l'accesso.
+          </p>
+          <Button onClick={() => void signOut()} variant="outline" className="w-full">
+            Esci
+          </Button>
+        </div>
       </div>
     );
   }
