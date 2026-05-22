@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
+import MfaGate from '@/components/MfaGate';
 import Login from '@/pages/Login';
 import ResetPassword from '@/pages/ResetPassword';
 import DashboardSK from '@/pages/DashboardCapo';
@@ -38,7 +39,7 @@ function ProtectedRoute({
   children: React.ReactNode;
   allowedRole?: 'admin' | 'operator';
 }) {
-  const { user, role, loading, isApproved } = useAuth();
+  const { user, role, mfaStatus, loading, isApproved } = useAuth();
 
   if (loading) {
     return (
@@ -55,6 +56,18 @@ function ProtectedRoute({
   // Se non approvato, mostra pagina attesa
   if (!isApproved && role !== 'admin') {
     return <PendingApproval />;
+  }
+
+  if (mfaStatus === 'checking' || mfaStatus === 'not_authenticated') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-muted-foreground">Verifica sicurezza...</div>
+      </div>
+    );
+  }
+
+  if (mfaStatus === 'enrollment_required' || mfaStatus === 'challenge_required') {
+    return <MfaGate />;
   }
 
   if (allowedRole && role !== allowedRole) {

@@ -4,15 +4,18 @@ import { createPendingOperator, checkOperatorApproved as checkOperatorApproval }
 import type { User } from '@supabase/supabase-js';
 
 export type UserRole = 'admin' | 'operator' | null;
+export type MfaStatus = 'checking' | 'not_authenticated' | 'enrollment_required' | 'challenge_required' | 'verified';
 
 interface AuthContextValue {
   user: User | null;
   role: UserRole;
+  mfaStatus: MfaStatus;
   loading: boolean;
   isApproved: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshMfaStatus: () => Promise<MfaStatus>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -31,8 +34,33 @@ function extractRole(user: User | null): UserRole {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole>(null);
+  const [mfaStatus, setMfaStatus] = useState<MfaStatus>('checking');
   const [loading, setLoading] = useState(true);
   const [isApproved, setIsApproved] = useState(true);
+
+  const refreshMfaStatus = async (): Promise<MfaStatus> => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session?.user) {
+      setMfaStatus('not_authenticated');
+      return 'not_authenticated';
+    }
+
+    const factors = await supabase.auth.mfa.listFactors();
+    if (factors.error) throw factors.error;
+    const verifiedTotp = factors.data.totp.filter((factor) => factor.status === 'verified');
+    if (!verifiedTotp.length) {
+      setMfaStatus('enrollment_required');
+      return 'enrollment_required';
+    }
+
+    const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (assurance.error) throw assurance.error;
+    const next = assurance.data.nextLevel === 'aal2' && assurance.data.currentLevel !== 'aal2'
+      ? 'challenge_required'
+      : 'verified';
+    setMfaStatus(next);
+    return next;
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -44,6 +72,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (u?.email) {
         const approved = await checkOperatorApproval(u.email);
         setIsApproved(approved);
+        await refreshMfaStatus();
+      } else {
+        setMfaStatus('not_authenticated');
       }
       setLoading(false);
     });
@@ -56,6 +87,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (u?.email) {
         const approved = await checkOperatorApproval(u.email);
         setIsApproved(approved);
+        await refreshMfaStatus();
+      } else {
+        setMfaStatus('not_authenticated');
       }
     });
 
@@ -75,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Non sloggare, ma mostrare banner in attesa
       return;
     }
+    await refreshMfaStatus();
   };
 
   const signUp = async (email: string, password: string) => {
@@ -94,10 +129,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setMfaStatus('not_authenticated');
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, isApproved, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, role, mfaStatus, loading, isApproved, signIn, signUp, signOut, refreshMfaStatus }}>
       {children}
     </AuthContext.Provider>
   );
