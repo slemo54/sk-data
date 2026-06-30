@@ -2,6 +2,7 @@ import type {
   Contact,
   ContactCreate,
   ContactPatch,
+  ContactSourceName,
   ContactSource,
   ContactsFilters,
   ContactsResponse,
@@ -11,6 +12,7 @@ import type {
   ReviewStatus,
   ViaSourcePatch,
 } from '@/types/contact';
+import { isCategoryFilterSourceName } from '@/lib/contactSourceDisplay';
 import { sbFetch, sbFetchWithCount } from '@/lib/supabase';
 import { getAccessToken } from '@/lib/auth';
 
@@ -138,6 +140,14 @@ function buildSourceFilter(filters: ContactsFilters): string {
     parts.push(`contact_sources.source_key=like.${encodeURIComponent('via_db:*')}`);
     if (filters.viaCourse && filters.viaCourse !== 'all') {
       parts.push(`contact_sources.wine_role=eq.${encodeURIComponent(filters.viaCourse)}`);
+    }
+    return `&${parts.join('&')}`;
+  }
+
+  if (isCategoryFilterSourceName(source)) {
+    parts.push(`contact_sources.source_key=like.${encodeURIComponent(`${source}:*`)}`);
+    if (filters.sourceCategory && filters.sourceCategory !== 'all') {
+      parts.push(`contact_sources.wine_role=eq.${encodeURIComponent(filters.sourceCategory)}`);
     }
     return `&${parts.join('&')}`;
   }
@@ -427,6 +437,18 @@ export async function fetchViaCourseClasses(): Promise<string[]> {
   rows.forEach((row) => {
     const course = row.wine_role?.trim();
     if (course) set.add(course);
+  });
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+export async function fetchSourceCategories(source: ContactSourceName): Promise<string[]> {
+  const rows = await sbFetch<Array<{ wine_role: string | null }>>(
+    `/rest/v1/contact_sources?select=wine_role&source_key=like.${encodeURIComponent(`${source}:*`)}&wine_role=not.is.null`,
+  );
+  const set = new Set<string>();
+  rows.forEach((row) => {
+    const category = row.wine_role?.trim();
+    if (category) set.add(category);
   });
   return [...set].sort((a, b) => a.localeCompare(b));
 }

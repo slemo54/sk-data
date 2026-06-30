@@ -15,7 +15,8 @@
     "test:linkedin-connections": "node scripts/linkedin-connections-lib.test.mjs",
     "import:linkedin-connections": "node scripts/import-linkedin-connections.mjs",
     "enrich:linkedin-locations": "node scripts/enrich-linkedin-locations.mjs",
-    "import:via-db": "python3 scripts/import-via-db.py"
+    "import:via-db": "python3 scripts/import-via-db.py",
+    "import:vinitaly-canada": "python3 scripts/import-vinitaly-canada-contacts.py"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

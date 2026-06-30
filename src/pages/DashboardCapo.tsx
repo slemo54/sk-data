@@ -7,13 +7,21 @@ import {
   fetchContacts,
   fetchContactSources,
   fetchDashboardKpi,
+  fetchSourceCategories,
   fetchViaCourseClasses,
   updateContact,
   fetchPendingOperators,
   approveOperator,
   rejectOperator,
 } from '@/lib/contactsService';
-import { hasLinkedinSkSource, hasViaDbSource } from '@/lib/contactSourceDisplay';
+import {
+  CATEGORY_FILTER_SOURCE_OPTIONS,
+  hasBuyerSource,
+  hasLinkedinSkSource,
+  hasViaDbSource,
+  hasVinitalyCanadaSource,
+  isCategoryFilterSourceName,
+} from '@/lib/contactSourceDisplay';
 import type { PendingOperator } from '@/lib/contactsService';
 import { useDebounce } from '@/hooks/use-debounce';
 import type {
@@ -139,6 +147,7 @@ export default function DashboardSK() {
   const debouncedQuery = useDebounce(searchInput, 300);
   const [pendingOperators, setPendingOperators] = useState<PendingOperator[]>([]);
   const [viaCourseClasses, setViaCourseClasses] = useState<string[]>([]);
+  const [sourceCategories, setSourceCategories] = useState<string[]>([]);
 
   const selectedContact = useMemo(
     () => contacts.find((c) => c.id === selectedContactId) ?? null,
@@ -156,6 +165,7 @@ export default function DashboardSK() {
       filters.location !== undefined ||
       filters.country !== undefined ||
       filters.viaCourse !== undefined ||
+      filters.sourceCategory !== undefined ||
       filters.query !== undefined ||
       Boolean(filters.hasInstagram) ||
       Boolean(filters.hasLinkedin) ||
@@ -231,6 +241,14 @@ export default function DashboardSK() {
   useEffect(() => {
     void fetchViaCourseClasses().then(setViaCourseClasses).catch(() => { /* silent */ });
   }, []);
+
+  useEffect(() => {
+    if (!isCategoryFilterSourceName(filters.source)) {
+      setSourceCategories([]);
+      return;
+    }
+    void fetchSourceCategories(filters.source).then(setSourceCategories).catch(() => setSourceCategories([]));
+  }, [filters.source]);
 
   useEffect(() => {
     void refreshPendingOperators();
@@ -690,6 +708,7 @@ export default function DashboardSK() {
               onValueChange={(v) => handleFilterChange({
                 source: v as ContactsFilters['source'],
                 viaCourse: v === 'via_db' ? filters.viaCourse : undefined,
+                sourceCategory: undefined,
               })}
             >
               <SelectTrigger className="w-[160px] h-9 bg-background">
@@ -701,6 +720,9 @@ export default function DashboardSK() {
                 <SelectItem value="guildsomm">GuildSomm</SelectItem>
                 <SelectItem value="linkedin_sk">LinkedIn SK</SelectItem>
                 <SelectItem value="via_db">VIA DB</SelectItem>
+                {CATEGORY_FILTER_SOURCE_OPTIONS.map((source) => (
+                  <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Input
@@ -763,6 +785,22 @@ export default function DashboardSK() {
                   <SelectItem value="all">Tutti i course/class</SelectItem>
                   {viaCourseClasses.map((course) => (
                     <SelectItem key={course} value={course}>{course}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {isCategoryFilterSourceName(filters.source) && (
+              <Select
+                value={filters.sourceCategory ?? 'all'}
+                onValueChange={(v) => handleFilterChange({ sourceCategory: v === 'all' ? undefined : v })}
+              >
+                <SelectTrigger className="min-w-[190px] h-8 text-xs bg-amber-50 border-amber-500 text-amber-950 ring-2 ring-amber-300 shadow-sm">
+                  <SelectValue placeholder="Categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutte le categorie</SelectItem>
+                  {sourceCategories.map((category) => (
+                    <SelectItem key={category} value={category}>{category}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -914,6 +952,16 @@ export default function DashboardSK() {
                               title="VIA DB"
                               className="h-5 w-5 rounded-full object-cover"
                             />
+                          )}
+                          {hasBuyerSource(contact) && (
+                            <Badge variant="outline" className="h-5 rounded-full bg-amber-50 px-2 text-[10px] text-amber-800 border-amber-200">
+                              Buyer
+                            </Badge>
+                          )}
+                          {hasVinitalyCanadaSource(contact) && (
+                            <Badge variant="outline" className="h-5 rounded-full bg-red-50 px-2 text-[10px] text-red-700 border-red-200">
+                              VC
+                            </Badge>
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground">

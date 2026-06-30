@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Contact, ContactSource, ContactPatch, ViaSourcePatch } from '@/types/contact';
-import { getSourceLabel, isViaDbSource } from '@/lib/contactSourceDisplay';
+import { getSourceLabel, isBuyerSource, isViaDbSource, isVinitalyCanadaSource } from '@/lib/contactSourceDisplay';
 import { buildLocationSuggestions } from '@/lib/locationSuggestions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -386,6 +386,20 @@ export default function OperatorContactDrawer({
                         <span>{sourceValue(source, 'via_phone') ?? '-'}</span>
                         <span className="text-muted-foreground">IWA/IWE</span>
                         <span>{sourceValue(source, 'via_iwa_iwe') ?? '-'}</span>
+                      </div>
+                    )}
+                    {(isBuyerSource(source) || isVinitalyCanadaSource(source)) && (
+                      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                        <span className="text-muted-foreground">Categoria</span>
+                        <span>{sourceValue(source, 'category') ?? '-'}</span>
+                        <span className="text-muted-foreground">File</span>
+                        <span>{sourceValue(source, 'source_file') ?? '-'}</span>
+                        <span className="text-muted-foreground">Evento</span>
+                        <span>{sourceValue(source, 'event') ?? '-'}</span>
+                        <span className="text-muted-foreground">Phone</span>
+                        <span>{sourceValue(source, 'phone') ?? '-'}</span>
+                        <span className="text-muted-foreground">Web/address</span>
+                        <span>{sourceValue(source, 'website') ?? sourceValue(source, 'address') ?? '-'}</span>
                       </div>
                     )}
                     {source.profile_url && (

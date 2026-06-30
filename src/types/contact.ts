@@ -10,7 +10,16 @@ export type NextAction =
   | 'da_verificare'
   | 'chiuso';
 
-export type ContactSourceName = 'wine_awards' | 'guildsomm' | 'linkedin_sk' | 'via_db';
+export type ContactSourceName =
+  | 'wine_awards'
+  | 'guildsomm'
+  | 'linkedin_sk'
+  | 'via_db'
+  | 'elenco_buyer'
+  | 'rsvp_spazio_camera_vinitaly_canada'
+  | 'rsvp_cena_aria_vinitaly_canada'
+  | 'rsvp_ambasciata_vinitaly_canada'
+  | 'rsvp_via_course_vinitaly_canada';
 
 export interface Contact {
   id: string;
@@ -69,6 +78,7 @@ export interface ContactsFilters {
   nextAction?: NextAction | 'all';
   approved?: boolean;
   contacted?: boolean;
+  sourceCategory?: string;
   assignedToMe?: boolean;
   unassigned?: boolean;
   assignedToOthers?: boolean;
