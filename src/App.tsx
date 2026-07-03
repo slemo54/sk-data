@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
+import { getPasswordRecoveryRedirectPath } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import MfaGate from '@/components/MfaGate';
 import Login from '@/pages/Login';
@@ -40,6 +41,11 @@ function ProtectedRoute({
   allowedRole?: 'admin' | 'operator';
 }) {
   const { user, role, mfaStatus, loading, isApproved, signOut } = useAuth();
+  const recoveryPath = getPasswordRecoveryRedirectPath();
+
+  if (recoveryPath) {
+    return <Navigate to={recoveryPath} replace />;
+  }
 
   if (loading) {
     return (
