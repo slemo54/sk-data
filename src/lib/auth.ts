@@ -38,3 +38,19 @@ export function getCurrentRoleFromToken(): string | null {
     return null;
   }
 }
+
+export function getPasswordRecoveryRedirectPath(): string | null {
+  if (typeof window === 'undefined') return null;
+  if (window.location.pathname === '/reset-password') return null;
+
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  const hashParams = new URLSearchParams(hash);
+  const searchParams = new URLSearchParams(window.location.search);
+  const isRecovery =
+    hashParams.get('type') === 'recovery' ||
+    searchParams.get('type') === 'recovery' ||
+    searchParams.has('code');
+
+  if (!isRecovery) return null;
+  return `/reset-password${window.location.search}${window.location.hash}`;
+}
