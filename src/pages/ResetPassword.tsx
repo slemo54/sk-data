@@ -96,6 +96,15 @@ export default function ResetPassword() {
       code: mfaCode,
     });
     if (verify.error) throw verify.error;
+
+    const session = verify.data as { access_token?: string; refresh_token?: string };
+    if (session.access_token && session.refresh_token) {
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      });
+      if (sessionError) throw sessionError;
+    }
   };
 
   const updatePassword = async () => {
