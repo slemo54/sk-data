@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/auth';
+import { getPasswordRecoveryRedirectPath, supabase } from '@/lib/auth';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,12 @@ export default function Login() {
   const [skLoading, setSkLoading] = useState(false);
 
   useEffect(() => {
+    const recoveryPath = getPasswordRecoveryRedirectPath();
+    if (recoveryPath) {
+      navigate(recoveryPath, { replace: true });
+      return;
+    }
+
     if (user && role) {
       navigateByRole(role, navigate);
     }
