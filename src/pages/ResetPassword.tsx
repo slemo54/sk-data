@@ -14,34 +14,47 @@ export default function ResetPassword() {
   const [hashParsed, setHashParsed] = useState(false);
 
   useEffect(() => {
-    // Supabase reindirizza con #access_token=...&refresh_token=...&type=recovery
-    const hash = window.location.hash;
-    if (!hash) {
-      setError('Link non valido o scaduto. Richiedi un nuovo reset password.');
-      return;
-    }
+    let cancelled = false;
 
-    const params = new URLSearchParams(hash.substring(1));
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    const type = params.get('type');
+    void (async () => {
+      try {
+        // Supabase puo' reindirizzare con #access_token=...&type=recovery oppure con ?code=... in flow PKCE.
+        const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+        const hashParams = new URLSearchParams(hash);
+        const searchParams = new URLSearchParams(window.location.search);
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const hashType = hashParams.get('type');
+        const code = searchParams.get('code');
 
-    if (!accessToken || type !== 'recovery') {
-      setError('Link non valido o scaduto. Richiedi un nuovo reset password.');
-      return;
-    }
+        if (accessToken && hashType === 'recovery') {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          });
+          if (sessionError) throw sessionError;
+        } else if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) throw exchangeError;
+        } else {
+          const { data } = await supabase.auth.getSession();
+          if (!data.session?.user) {
+            throw new Error('Link non valido o scaduto. Richiedi un nuovo reset password.');
+          }
+        }
 
-    // Imposta la sessione temporanea con il token di recovery
-    supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken || '',
-    }).then(({ error }) => {
-      if (error) {
-        setError('Sessione non valida. Richiedi un nuovo reset password.');
-      } else {
+        if (cancelled) return;
+        window.history.replaceState(null, '', '/reset-password');
         setHashParsed(true);
+      } catch (err) {
+        if (cancelled) return;
+        setError((err as Error).message || 'Sessione non valida. Richiedi un nuovo reset password.');
       }
-    });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,6 +75,7 @@ export default function ResetPassword() {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
+      await supabase.auth.signOut();
       setSuccess(true);
       // Dopo 3 secondi reindirizza al login
       setTimeout(() => {
