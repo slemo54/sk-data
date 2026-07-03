@@ -46,10 +46,11 @@ export function getPasswordRecoveryRedirectPath(): string | null {
   const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
   const hashParams = new URLSearchParams(hash);
   const searchParams = new URLSearchParams(window.location.search);
+  const canUsePkceCode = window.location.pathname === '/' || window.location.pathname === '/login';
   const isRecovery =
     hashParams.get('type') === 'recovery' ||
     searchParams.get('type') === 'recovery' ||
-    searchParams.has('code');
+    (canUsePkceCode && searchParams.has('code'));
 
   if (!isRecovery) return null;
   return `/reset-password${window.location.search}${window.location.hash}`;
