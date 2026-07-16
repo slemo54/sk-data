@@ -30,6 +30,10 @@ import {
   isCategoryFilterSourceName,
 } from '@/lib/contactSourceDisplay';
 import { useDebounce } from '@/hooks/use-debounce';
+import {
+  useContactResultTools,
+  useVirtualContactRows,
+} from '@/hooks/use-contact-result-tools';
 import type {
   Contact,
   ContactPatch,
@@ -66,6 +70,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Download,
   Instagram,
   Linkedin,
   LogOut,
@@ -73,6 +78,7 @@ import {
   MessageSquare,
   Plus,
   RefreshCw,
+  Rows3,
   Trash2,
   Search,
   X,
@@ -135,10 +141,23 @@ export default function OperatorePage() {
   const debouncedQuery = useDebounce(searchInput, 300);
 
   const userEmail = user?.email ?? '';
+  const [dataVersion, setDataVersion] = useState(0);
+  const resultTools = useContactResultTools({
+    contacts,
+    total,
+    filters,
+    sort,
+    dataVersion,
+  });
+  const resultContacts = resultTools.contacts;
+  const virtualContacts = useVirtualContactRows(resultContacts, resultTools.showAll);
+  const isTableLoading =
+    loading ||
+    (resultTools.showAll && resultTools.showAllLoading && resultContacts.length === 0);
 
   const selectedContact = useMemo(
-    () => contacts.find((contact) => contact.id === selectedContactId) ?? null,
-    [contacts, selectedContactId],
+    () => resultContacts.find((contact) => contact.id === selectedContactId) ?? null,
+    [resultContacts, selectedContactId],
   );
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
@@ -167,15 +186,13 @@ export default function OperatorePage() {
         if (signal?.aborted) return;
         setContacts(response.rows);
         setTotal(response.total);
-        if (!selectedContactId && response.rows.length) {
-          setSelectedContactId(response.rows[0].id);
-        }
-        if (
-          selectedContactId &&
-          !response.rows.find((row) => row.id === selectedContactId)
-        ) {
-          setSelectedContactId(response.rows[0]?.id ?? '');
-        }
+        setDataVersion((version) => version + 1);
+        setSelectedContactId((currentId) => {
+          if (!currentId) return response.rows[0]?.id ?? '';
+          return response.rows.some((row) => row.id === currentId)
+            ? currentId
+            : response.rows[0]?.id ?? '';
+        });
       } catch (err) {
         if ((err as Error).name === 'AbortError') return;
         setError((err as Error).message || 'Unable to load contacts');
@@ -183,7 +200,7 @@ export default function OperatorePage() {
         setLoading(false);
       }
     },
-    [filters, page, selectedContactId, sort],
+    [filters, page, sort],
   );
 
   useEffect(() => {
@@ -428,7 +445,7 @@ export default function OperatorePage() {
   };
 
   const handleToggleSelectAll = () => {
-    const visibleIds = contacts.map((c) => c.id);
+    const visibleIds = resultContacts.map((c) => c.id);
     const allSelected = visibleIds.every((id) => selectedIds.has(id));
     if (allSelected) {
       setSelectedIds((prev) => {
@@ -453,14 +470,6 @@ export default function OperatorePage() {
       return next;
     });
   };
-
-  const socialCounts = useMemo(() => {
-    return {
-      instagram: contacts.filter((c) => c.instagram_url).length,
-      linkedin: contacts.filter((c) => c.linkedin_url).length,
-      email: contacts.filter((c) => c.email).length,
-    };
-  }, [contacts]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -503,7 +512,7 @@ export default function OperatorePage() {
   };
 
   const renderPagination = () => {
-    if (totalPages <= 1) return null;
+    if (resultTools.showAll || totalPages <= 1) return null;
     return (
       <div className="flex items-center justify-center gap-1 pt-4">
         <Button variant="ghost" size="icon" onClick={() => setPage(1)} disabled={page <= 1}>
@@ -811,23 +820,60 @@ export default function OperatorePage() {
           </div>
         )}
 
-        {/* Social counters */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1"><Instagram className="h-4 w-4 text-pink-600" /> {socialCounts.instagram}</span>
-          <span className="flex items-center gap-1"><Linkedin className="h-4 w-4 text-blue-700" /> {socialCounts.linkedin}</span>
-          <span className="flex items-center gap-1"><Mail className="h-4 w-4 text-emerald-600" /> {socialCounts.email}</span>
-          <span className="font-medium text-foreground">Tot: {total.toLocaleString()}</span>
+        {/* Social counters and result actions */}
+        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1"><Instagram className="h-4 w-4 text-pink-600" /> {resultTools.channelCounts.instagram.toLocaleString('it-IT')}</span>
+          <span className="flex items-center gap-1"><Linkedin className="h-4 w-4 text-blue-700" /> {resultTools.channelCounts.linkedin.toLocaleString('it-IT')}</span>
+          <span className="flex items-center gap-1"><Mail className="h-4 w-4 text-emerald-600" /> {resultTools.channelCounts.email.toLocaleString('it-IT')}</span>
+          <span className="font-medium text-foreground">Tot: {total.toLocaleString('it-IT')}</span>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {resultTools.showAllLoading && (
+              <span className="text-xs">
+                Caricati {resultTools.showAllProgress.loaded.toLocaleString('it-IT')} / {resultTools.showAllProgress.total.toLocaleString('it-IT')}
+              </span>
+            )}
+            {resultTools.exporting && (
+              <span className="text-xs">
+                Export {resultTools.exportProgress.loaded.toLocaleString('it-IT')} / {resultTools.exportProgress.total.toLocaleString('it-IT')}
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-pressed={resultTools.showAll}
+              onClick={resultTools.toggleShowAll}
+              className="gap-2"
+            >
+              <Rows3 className="h-4 w-4" />
+              {resultTools.showAll ? 'Usa paginazione' : 'Mostra tutti'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void resultTools.exportCsv()}
+              disabled={resultTools.exporting || resultTools.showAllLoading || total === 0}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {resultTools.exporting ? 'Esportazione...' : 'Export CSV'}
+            </Button>
+          </div>
         </div>
 
         {/* Table */}
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div
+            className={resultTools.showAll ? 'max-h-[720px] overflow-auto' : 'overflow-x-auto'}
+            onScroll={resultTools.showAll ? virtualContacts.onScroll : undefined}
+          >
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-muted/50">
                   <TableHead className="w-[40px] text-center">
                     <Checkbox
-                      checked={contacts.length > 0 && contacts.every((c) => selectedIds.has(c.id))}
+                      checked={resultContacts.length > 0 && resultContacts.every((c) => selectedIds.has(c.id))}
                       onCheckedChange={handleToggleSelectAll}
                       aria-label="Seleziona tutti"
                     />
@@ -843,7 +889,12 @@ export default function OperatorePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading && (
+                {!isTableLoading && virtualContacts.topSpacer > 0 && (
+                  <TableRow aria-hidden="true" className="hover:bg-transparent">
+                    <TableCell colSpan={9} style={{ height: virtualContacts.topSpacer, padding: 0 }} />
+                  </TableRow>
+                )}
+                {isTableLoading && (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
@@ -853,14 +904,14 @@ export default function OperatorePage() {
                     </TableCell>
                   </TableRow>
                 )}
-                {!loading && !contacts.length && (
+                {!isTableLoading && !resultContacts.length && (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       Nessun contatto trovato.
                     </TableCell>
                   </TableRow>
                 )}
-                {!loading && contacts.map((contact) => {
+                {!isTableLoading && virtualContacts.rows.map((contact) => {
                   const isMine = contact.assigned_to === userEmail;
                   const isLocked = !isMine;
                   const rowBg = isMine
@@ -871,6 +922,7 @@ export default function OperatorePage() {
                   return (
                     <TableRow
                       key={contact.id}
+                      style={resultTools.showAll ? { height: 72 } : undefined}
                       className={`transition-colors ${rowBg} ${contact.id === selectedContactId ? 'bg-muted/60' : 'hover:bg-muted/40'} ${isLocked ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
                       onClick={() => { setSelectedContactId(contact.id); setSheetOpen(true); }}
                     >
@@ -1018,6 +1070,11 @@ export default function OperatorePage() {
                     </TableRow>
                   );
                 })}
+                {!isTableLoading && virtualContacts.bottomSpacer > 0 && (
+                  <TableRow aria-hidden="true" className="hover:bg-transparent">
+                    <TableCell colSpan={9} style={{ height: virtualContacts.bottomSpacer, padding: 0 }} />
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>

@@ -47,7 +47,19 @@ export interface Contact {
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;
-  contact_sources?: Pick<ContactSource, 'source' | 'source_key' | 'raw_data'>[];
+  contact_sources?: Pick<
+    ContactSource,
+    | 'id'
+    | 'contact_id'
+    | 'source'
+    | 'source_key'
+    | 'restaurant_name'
+    | 'award'
+    | 'wine_role'
+    | 'profile_url'
+    | 'raw_data'
+    | 'created_at'
+  >[];
 }
 
 export interface ContactSource {

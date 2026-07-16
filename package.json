@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "import:contacts": "node scripts/import-contacts.mjs",
+    "test:contact-export": "node --experimental-strip-types --test scripts/contact-export.test.mts",
     "test:linkedin-sk-enrichment": "node scripts/linkedin-sk-enrichment-lib.test.mjs",
     "export:linkedin-sk-enrichment": "node scripts/export-linkedin-sk-enrichment.mjs",
     "import:linkedin-sk-enrichment": "node scripts/import-linkedin-sk-enrichment.mjs",

@@ -130,32 +130,35 @@ function buildFilters(filters: ContactsFilters): string {
   return params.length ? `&${params.join('&')}` : '';
 }
 
-function buildSourceFilter(filters: ContactsFilters): string {
+function buildSourceFilter(
+  filters: ContactsFilters,
+  relation = 'contact_sources',
+): string {
   const source = filters.source;
   if (!source || source === 'all') return '';
 
   const parts: string[] = [];
 
   if (source === 'via_db') {
-    parts.push(`contact_sources.source_key=like.${encodeURIComponent('via_db:*')}`);
+    parts.push(`${relation}.source_key=like.${encodeURIComponent('via_db:*')}`);
     if (filters.viaCourse && filters.viaCourse !== 'all') {
-      parts.push(`contact_sources.wine_role=eq.${encodeURIComponent(filters.viaCourse)}`);
+      parts.push(`${relation}.wine_role=eq.${encodeURIComponent(filters.viaCourse)}`);
     }
     return `&${parts.join('&')}`;
   }
 
   if (isCategoryFilterSourceName(source)) {
-    parts.push(`contact_sources.source_key=like.${encodeURIComponent(`${source}:*`)}`);
+    parts.push(`${relation}.source_key=like.${encodeURIComponent(`${source}:*`)}`);
     if (filters.sourceCategory && filters.sourceCategory !== 'all') {
-      parts.push(`contact_sources.wine_role=eq.${encodeURIComponent(filters.sourceCategory)}`);
+      parts.push(`${relation}.wine_role=eq.${encodeURIComponent(filters.sourceCategory)}`);
     }
     return `&${parts.join('&')}`;
   }
 
-  parts.push(`contact_sources.source=eq.${encodeURIComponent(source)}`);
+  parts.push(`${relation}.source=eq.${encodeURIComponent(source)}`);
 
   if (source === 'wine_awards') {
-    parts.push(`contact_sources.source_key=not.like.${encodeURIComponent('via_db:*')}`);
+    parts.push(`${relation}.source_key=not.like.${encodeURIComponent('via_db:*')}`);
   }
 
   return `&${parts.join('&')}`;
@@ -170,12 +173,17 @@ export async function fetchContacts(
   const hasSourceFilter = filters.source && filters.source !== 'all';
 
   // Per filtro su source usiamo embedded resource con !inner
+  const sourceFields =
+    'id,contact_id,source,source_key,restaurant_name,award,wine_role,profile_url,raw_data,created_at';
   const selectClause = hasSourceFilter
-    ? '*,contact_sources!inner(source,source_key,raw_data)'
-    : '*,contact_sources(source,source_key,raw_data)';
+    ? `*,source_filter:contact_sources!inner(id),contact_sources(${sourceFields})`
+    : `*,contact_sources(${sourceFields})`;
 
   const filterParams = buildFilters(filters);
-  const sourceFilter = buildSourceFilter(filters);
+  const sourceFilter = buildSourceFilter(
+    filters,
+    hasSourceFilter ? 'source_filter' : 'contact_sources',
+  );
 
   const offset = (pagination.page - 1) * pagination.pageSize;
   const order = `order=${sort.field}.${sort.direction}`;
@@ -189,6 +197,84 @@ export async function fetchContacts(
     rows,
     total,
   };
+}
+
+export interface ContactLoadProgress {
+  loaded: number;
+  total: number;
+}
+
+export interface ContactChannelCounts {
+  instagram: number;
+  linkedin: number;
+  email: number;
+}
+
+const ALL_CONTACTS_CHUNK_SIZE = 1000;
+
+export async function fetchAllContacts(
+  filters: ContactsFilters,
+  sort: ContactSort,
+  signal?: AbortSignal,
+  onProgress?: (progress: ContactLoadProgress, rows: Contact[]) => void,
+): Promise<Contact[]> {
+  const allRows: Contact[] = [];
+  let page = 1;
+  let total = 0;
+
+  do {
+    const response = await fetchContacts(
+      filters,
+      { page, pageSize: ALL_CONTACTS_CHUNK_SIZE },
+      sort,
+      signal,
+    );
+    total = response.total;
+    allRows.push(...response.rows);
+    onProgress?.(
+      { loaded: allRows.length, total },
+      [...allRows],
+    );
+
+    if (response.rows.length < ALL_CONTACTS_CHUNK_SIZE) break;
+    page += 1;
+  } while (allRows.length < total);
+
+  return allRows;
+}
+
+export async function fetchContactChannelCounts(
+  filters: ContactsFilters,
+  signal?: AbortSignal,
+): Promise<ContactChannelCounts> {
+  const countFor = async (
+    channelFilter: Pick<ContactsFilters, 'hasInstagram' | 'hasLinkedin' | 'hasEmail'>,
+  ): Promise<number> => {
+    const mergedFilters = { ...filters, ...channelFilter };
+    const hasSourceFilter = Boolean(
+      mergedFilters.source && mergedFilters.source !== 'all',
+    );
+    const selectClause = hasSourceFilter
+      ? 'id,source_filter:contact_sources!inner(id)'
+      : 'id';
+    const sourceFilter = buildSourceFilter(
+      mergedFilters,
+      hasSourceFilter ? 'source_filter' : 'contact_sources',
+    );
+    const { count } = await sbFetchWithCount<unknown[]>(
+      `/rest/v1/contacts?select=${selectClause}${buildFilters(mergedFilters)}${sourceFilter}&limit=0`,
+      { signal },
+    );
+    return count;
+  };
+
+  const [instagram, linkedin, email] = await Promise.all([
+    countFor({ hasInstagram: true }),
+    countFor({ hasLinkedin: true }),
+    countFor({ hasEmail: true }),
+  ]);
+
+  return { instagram, linkedin, email };
 }
 
 export async function claimContacts(count: number, userId: string): Promise<Contact[]> {
